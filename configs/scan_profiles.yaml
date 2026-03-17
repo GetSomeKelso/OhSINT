@@ -1,0 +1,66 @@
+# OSINT Orchestrator — Scan Profiles
+
+passive:
+  description: "Passive recon only — zero interaction with target infrastructure"
+  tools:
+    - theharvester:
+        sources: "google,bing,linkedin,dnsdumpster"
+    - shodan:
+        mode: "search"
+    - metagoofil:
+        filetypes: "pdf,doc,xls,ppt,docx,xlsx,pptx"
+        max_results: 100
+    - github_dorks:
+        mode: "org_scan"
+    - exiftool:
+        mode: "post_metagoofil"
+    - spiderfoot:
+        use_case: "passive"
+    - dork_cli:
+        dorks: "ghdb_passive"
+
+active:
+  description: "Active recon — direct interaction with target (requires explicit auth)"
+  inherits: passive
+  tools:
+    - spiderfoot:
+        use_case: "all"
+    - recon_ng:
+        modules: "active_set"
+    - xray:
+        mode: "full"
+
+metadata:
+  description: "Document and metadata focused recon"
+  tools:
+    - metagoofil:
+        filetypes: "pdf,doc,xls,ppt,docx,xlsx,pptx,odp,ods"
+        max_results: 200
+    - exiftool:
+        mode: "post_metagoofil"
+    - dork_cli:
+        dorks: "filetype_dorks"
+
+social:
+  description: "People and social media focused recon"
+  tools:
+    - theharvester:
+        sources: "linkedin,google,bing"
+    - spiderfoot:
+        use_case: "investigate"
+        target_type: "person_name"
+    - creepy:
+        mode: "social"
+
+full:
+  description: "All tools, all modules — comprehensive recon"
+  inherits: active
+  tools:
+    - datasploit:
+        mode: "full"
+    - snitch:
+        mode: "full"
+    - vcsmap:
+        mode: "full"
+    - creepy:
+        mode: "social"

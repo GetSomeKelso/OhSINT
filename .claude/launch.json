@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "OhSINT MCP Server",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "src.mcp.server"],
+      "port": 3000
+    },
+    {
+      "name": "OhSINT CLI (list-tools)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "src.cli", "list-tools"],
+      "port": 0
+    },
+    {
+      "name": "OhSINT CLI (install-check)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "src.cli", "install-check"],
+      "port": 0
+    },
+    {
+      "name": "Pytest (all tests)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "pytest", "tests/", "-v"],
+      "port": 0
+    }
+  ]
+}

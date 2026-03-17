@@ -1,0 +1,14 @@
+services:
+  osint:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ../configs:/app/configs:ro
+      - ../results:/app/results
+    environment:
+      - OSINT_SHODAN_API_KEY=${OSINT_SHODAN_API_KEY:-}
+      - OSINT_THEHARVESTER_GITHUB_TOKEN=${OSINT_THEHARVESTER_GITHUB_TOKEN:-}
+    entrypoint: ["osint-orchestrator"]
+    stdin_open: true
+    tty: true

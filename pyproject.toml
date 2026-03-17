@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "osint-orchestrator"
+version = "0.1.0"
+description = "Unified OSINT reconnaissance orchestrator wrapping multiple tools"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "SheriffBart"}
+]
+dependencies = [
+    "click>=8.1",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+    "httpx>=0.25",
+    "mcp>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+]
+
+[project.scripts]
+osint-orchestrator = "src.cli:cli"
+ohsint-mcp = "src.mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

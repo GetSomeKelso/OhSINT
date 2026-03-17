@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(pip install:*)",
+      "Bash(python -c \"from src.mcp.server import mcp; print\\(f''MCP server OK: {mcp.name}''\\); tools = mcp._tool_manager.list_tools\\(\\); print\\(f''{len\\(tools\\)} MCP tools registered''\\)\")",
+      "Bash(python -m pytest tests/test_parsers.py -v)",
+      "Bash(gh auth:*)",
+      "mcp__MCP_DOCKER__create_repository"
+    ]
+  }
+}

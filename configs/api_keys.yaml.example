@@ -1,0 +1,35 @@
+# OSINT Orchestrator — API Key Configuration
+# Copy this file to api_keys.yaml and fill in your keys.
+# NEVER commit api_keys.yaml to version control.
+
+shodan:
+  api_key: ""
+
+theharvester:
+  bing_api: ""
+  github_token: ""
+  hunter_api: ""
+  intelx_api: ""
+  securitytrails_api: ""
+
+spiderfoot:
+  virustotal: ""
+  censys_id: ""
+  censys_secret: ""
+  fullcontact: ""
+  hunter: ""
+  ipinfo: ""
+
+recon_ng:
+  bing_api: ""
+  builtwith_api: ""
+  github_api: ""
+  google_api: ""
+  hashes_api: ""
+  ipinfodb_api: ""
+  shodan_api: ""
+  virustotal_api: ""
+  whoxy_api: ""
+
+github_dorks:
+  github_token: ""
