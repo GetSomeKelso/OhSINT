@@ -8,6 +8,7 @@ from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 from src.config import DEFAULT_DORK_DELAY
 
@@ -18,6 +19,7 @@ class GooDork(BaseTool):
     description = "Google dorking from the command line"
     binary_name = "GooDork"
     install_cmd = "go install github.com/k3170makan/GooDork@latest"
+    accepted_target_types = (TargetType.DOMAIN,)
     requires_api_keys = ()
 
     def build_command(self, target: str, **kwargs) -> List[str]:

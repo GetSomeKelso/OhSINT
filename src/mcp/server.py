@@ -102,7 +102,7 @@ async def osint_theharvester(
     """Harvest emails, subdomains, IPs from search engines for a domain."""
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "theharvester", domain, sources=sources, limit=limit,
     )
     return _format_result(result)
@@ -121,7 +121,7 @@ async def osint_spiderfoot(
     """
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "spiderfoot", target, use_case=use_case, output_format=output_format,
     )
     return _format_result(result)
@@ -139,7 +139,7 @@ async def osint_recon_ng(
     """
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "recon_ng", target, modules=modules,
     )
     return _format_result(result)
@@ -155,7 +155,7 @@ async def osint_metagoofil(
     """Harvest and analyze document metadata from a domain."""
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "metagoofil", domain, filetypes=filetypes, max_results=max_results,
     )
     return _format_result(result)
@@ -173,7 +173,7 @@ async def osint_shodan(
     """
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "shodan", query, mode=mode,
     )
     return _format_result(result)
@@ -188,7 +188,7 @@ async def osint_exiftool(
     """Extract metadata from downloaded files in a directory."""
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "exiftool", directory, filter_fields=filter_fields,
     )
     return _format_result(result)
@@ -206,7 +206,7 @@ async def osint_github_dorks(
     if dork_file:
         kwargs["dork_file"] = dork_file
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "github_dorks", target, **kwargs,
     )
     return _format_result(result)
@@ -224,7 +224,7 @@ async def osint_google_dorks(
     """
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "dork_cli", domain, dork_category=dork_category,
     )
     return _format_result(result)
@@ -239,7 +239,7 @@ async def osint_xray(
     """Run XRay network recon against a target."""
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "xray", target, mode=mode,
     )
     return _format_result(result)
@@ -254,7 +254,7 @@ async def osint_datasploit(
     """Run DataSploit OSINT visualizer. target_type: domain, email, ip, person."""
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "datasploit", target, target_type=target_type,
     )
     return _format_result(result)
@@ -271,7 +271,7 @@ async def osint_snitch(
     """Run Snitch information gathering via dorks against a target."""
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "snitch", target,
     )
     return _format_result(result)
@@ -286,7 +286,7 @@ async def osint_vcsmap(
     """Scan public version control systems for sensitive info about a target."""
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "vcsmap", target, mode=mode,
     )
     return _format_result(result)
@@ -301,7 +301,7 @@ async def osint_creepy(
     """Geolocation OSINT from social media profiles."""
     _require_auth(authorization_confirmed)
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "creepy", target, mode=mode,
     )
     return _format_result(result)
@@ -320,7 +320,7 @@ async def osint_goodork(
     if query:
         kwargs["query"] = query
     result = await asyncio.to_thread(
-        _get_orchestrator().run_tool,
+        _get_orchestrator().run_tool_resolved,
         "goodork", target, **kwargs,
     )
     return _format_result(result)

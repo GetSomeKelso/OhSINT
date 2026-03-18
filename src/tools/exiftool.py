@@ -9,6 +9,7 @@ from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 
 # Fields of interest for OSINT
@@ -47,6 +48,7 @@ class ExifTool(BaseTool):
     description = "Extract metadata from downloaded files"
     binary_name = "exiftool"
     install_cmd = "apt install libimage-exiftool-perl"
+    accepted_target_types = (TargetType.FILEPATH,)
     requires_api_keys = ()
 
     def build_command(self, target: str, **kwargs) -> List[str]:

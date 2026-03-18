@@ -9,6 +9,7 @@ from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 from src.config import DEFAULT_DORK_DELAY
 
@@ -21,6 +22,7 @@ class Snitch(BaseTool):
     description = "Information gathering via dorks"
     binary_name = "python3"
     install_cmd = "git clone https://github.com/Smaash/snitch.git /opt/tools/snitch"
+    accepted_target_types = (TargetType.DOMAIN,)
     requires_api_keys = ()
 
     def is_installed(self) -> bool:

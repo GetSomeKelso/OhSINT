@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 
 
@@ -16,6 +17,7 @@ class ShodanTool(BaseTool):
     description = "Search Shodan for internet-connected devices and services"
     binary_name = "shodan"
     install_cmd = "pip install shodan"
+    accepted_target_types = (TargetType.DOMAIN, TargetType.IP, TargetType.CIDR)
     requires_api_keys = ("shodan.api_key",)
 
     def build_command(self, target: str, **kwargs) -> List[str]:

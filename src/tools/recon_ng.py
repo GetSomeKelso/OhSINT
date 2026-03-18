@@ -11,6 +11,7 @@ from typing import List, Optional
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 
 
@@ -42,6 +43,7 @@ class ReconNg(BaseTool):
     description = "Modular recon framework (Metasploit-style)"
     binary_name = "recon-ng"
     install_cmd = "pip install recon-ng"
+    accepted_target_types = (TargetType.DOMAIN,)
     requires_api_keys = (
         "recon_ng.shodan_api",
         "recon_ng.bing_api",

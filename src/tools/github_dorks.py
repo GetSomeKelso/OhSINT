@@ -7,6 +7,7 @@ from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 
 # Built-in dork patterns for GitHub searching
@@ -48,6 +49,7 @@ class GithubDorks(BaseTool):
     description = "Scan GitHub repos/orgs for sensitive information leaks"
     binary_name = "github-dorks"
     install_cmd = "pip install github-dorks"
+    accepted_target_types = (TargetType.GITHUB_HANDLE,)
     requires_api_keys = ("github_dorks.github_token",)
 
     def build_command(self, target: str, **kwargs) -> List[str]:

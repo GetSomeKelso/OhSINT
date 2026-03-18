@@ -177,7 +177,7 @@ def tool(ctx, target, tool_name):
         timeout=ctx.obj["timeout"],
         verbose=ctx.obj["verbose"],
     )
-    result = orchestrator.run_tool(tool_name, target)
+    result = orchestrator.run_tool_resolved(tool_name, target)
     if result.errors:
         for err in result.errors:
             console.print(f"[red]Error: {err}[/red]")

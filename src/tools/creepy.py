@@ -9,6 +9,7 @@ from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 
 CREEPY_DIR = Path("/opt/tools/creepy")
@@ -20,6 +21,7 @@ class Creepy(BaseTool):
     description = "Geolocation OSINT from social media profiles"
     binary_name = "python3"
     install_cmd = "git clone https://github.com/ilektrojohn/creepy.git /opt/tools/creepy"
+    accepted_target_types = (TargetType.PERSON_NAME, TargetType.USERNAME)
     requires_api_keys = ()
 
     def is_installed(self) -> bool:

@@ -75,6 +75,7 @@ class ReconReport(BaseModel):
     """Consolidated report from a full reconnaissance run."""
 
     target: str
+    resolved_target: Optional[Dict[str, str]] = None
     scan_profile: str
     start_time: datetime
     end_time: datetime
@@ -105,6 +106,15 @@ class ReconReport(BaseModel):
             f"# OSINT Reconnaissance Report",
             f"",
             f"**Target:** {self.target}",
+        ]
+        if self.resolved_target:
+            rt = self.resolved_target
+            lines.append(f"**Detected as:** {rt.get('detected_type', 'unknown')} ({rt.get('confidence', '?')})")
+            for key in ("domain", "github_handle", "org_name", "person_name", "username", "email"):
+                if rt.get(key):
+                    label = key.replace("_", " ").title()
+                    lines.append(f"**{label}:** {rt[key]}")
+        lines.extend([
             f"**Profile:** {self.scan_profile}",
             f"**Period:** {self.start_time:%Y-%m-%d %H:%M} → {self.end_time:%Y-%m-%d %H:%M}",
             f"**Authorization Confirmed:** {self.authorization_confirmed}",
@@ -118,7 +128,7 @@ class ReconReport(BaseModel):
             f"",
             f"| Type | Count |",
             f"|------|-------|",
-        ]
+        ])
         for intel_type, count in sorted(self.summary.items()):
             lines.append(f"| {intel_type} | {count} |")
 
@@ -181,6 +191,16 @@ class ReconReport(BaseModel):
         tools_fail = ", ".join(self.tools_failed) or "None"
         target_esc = html_mod.escape(self.target)
 
+        # Build resolved-target HTML rows
+        resolved_html = ""
+        if self.resolved_target:
+            rt = self.resolved_target
+            resolved_html += f"<p><strong>Detected as:</strong> {html_mod.escape(rt.get('detected_type', 'unknown'))} ({html_mod.escape(rt.get('confidence', '?'))})</p>"
+            for key in ("domain", "github_handle", "org_name", "person_name", "username", "email"):
+                if rt.get(key):
+                    label = key.replace("_", " ").title()
+                    resolved_html += f"<p><strong>{label}:</strong> {html_mod.escape(rt[key])}</p>"
+
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -227,6 +247,7 @@ footer {{ margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--borde
     <h1>OhSINT Reconnaissance Report</h1>
     <div class="meta">
         <p><strong>Target:</strong> {target_esc}</p>
+        {resolved_html}
         <p><strong>Profile:</strong> {html_mod.escape(self.scan_profile)}</p>
         <p><strong>Period:</strong> {self.start_time:%Y-%m-%d %H:%M UTC} &rarr; {self.end_time:%Y-%m-%d %H:%M UTC}</p>
         <p><strong>Authorization:</strong> <span class="badge badge-ok">Confirmed</span></p>

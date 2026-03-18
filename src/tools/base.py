@@ -12,6 +12,7 @@ from typing import List, Optional, Tuple
 
 from src.config import Config, DEFAULT_TIMEOUT
 from src.models import ToolResult
+from src.target import TargetType
 
 logger = logging.getLogger("ohsint.tools")
 
@@ -44,6 +45,7 @@ class BaseTool(ABC):
     binary_name: str = ""  # e.g. "theHarvester", "spiderfoot"
     install_cmd: str = ""  # e.g. "pip install theHarvester"
     requires_api_keys: Tuple[str, ...] = ()  # immutable to avoid shared-state bugs
+    accepted_target_types: Tuple[TargetType, ...] = ()  # what this tool wants (order = priority)
 
     def __init__(self, config: Optional[Config] = None):
         self.config = config or Config()

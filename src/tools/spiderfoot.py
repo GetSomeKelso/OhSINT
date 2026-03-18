@@ -9,6 +9,7 @@ from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 
 # Map SpiderFoot event types to our IntelType
@@ -38,6 +39,7 @@ class SpiderFoot(BaseTool):
     description = "Multi-source OSINT automation (200+ modules)"
     binary_name = "spiderfoot"
     install_cmd = "pip install spiderfoot"
+    accepted_target_types = (TargetType.DOMAIN, TargetType.IP, TargetType.EMAIL, TargetType.PERSON_NAME)
     requires_api_keys = (
         "spiderfoot.virustotal",
         "spiderfoot.censys_id",

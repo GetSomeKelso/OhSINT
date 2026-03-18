@@ -10,6 +10,7 @@ from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 
 
@@ -19,6 +20,7 @@ class Metagoofil(BaseTool):
     description = "Harvest document metadata from a domain (PDF/DOC/XLS)"
     binary_name = "metagoofil"
     install_cmd = "pip install metagoofil"
+    accepted_target_types = (TargetType.DOMAIN,)
     requires_api_keys = ()
 
     def build_command(self, target: str, **kwargs) -> List[str]:

@@ -9,6 +9,7 @@ from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 
 # DataSploit is cloned to /opt/tools/datasploit in Docker
@@ -21,6 +22,7 @@ class DataSploit(BaseTool):
     description = "OSINT visualizer — aggregates Shodan, Censys, Clearbit"
     binary_name = "python3"
     install_cmd = "git clone https://github.com/upgoingstar/datasploit.git /opt/tools/datasploit"
+    accepted_target_types = (TargetType.DOMAIN, TargetType.IP, TargetType.EMAIL, TargetType.PERSON_NAME)
     requires_api_keys = ("shodan.api_key",)
 
     def is_installed(self) -> bool:

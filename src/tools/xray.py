@@ -8,6 +8,7 @@ from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 
 
@@ -17,6 +18,7 @@ class XRay(BaseTool):
     description = "Network recon and OSINT from public networks"
     binary_name = "xray"
     install_cmd = "go install github.com/evilsocket/xray@latest"
+    accepted_target_types = (TargetType.DOMAIN, TargetType.IP, TargetType.CIDR)
     requires_api_keys = ("shodan.api_key",)
 
     def build_command(self, target: str, **kwargs) -> List[str]:

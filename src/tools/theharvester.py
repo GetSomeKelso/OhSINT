@@ -8,6 +8,7 @@ from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
+from src.target import TargetType
 from src.tools.base import BaseTool
 
 
@@ -17,6 +18,7 @@ class TheHarvester(BaseTool):
     description = "Harvest emails, subdomains, IPs from search engines"
     binary_name = "theHarvester"
     install_cmd = "pip install theHarvester"
+    accepted_target_types = (TargetType.DOMAIN,)
     requires_api_keys = (
         "theharvester.bing_api",
         "theharvester.github_token",

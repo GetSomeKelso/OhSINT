@@ -12,6 +12,7 @@ from rich.console import Console
 
 from src.config import Config, DEFAULT_TIMEOUT
 from src.models import IntelFinding, ReconReport, ToolResult
+from src.target import ResolvedTarget, TargetResolver
 from src.tools.base import BaseTool
 
 console = Console()
@@ -32,6 +33,7 @@ class Orchestrator:
         self.timeout = timeout
         self.parallel = parallel
         self.verbose = verbose
+        self.resolver = TargetResolver()
         # Import tools to trigger registration, then snapshot the registry
         import src.tools  # noqa: F401
         from src.registry import _TOOL_REGISTRY
@@ -46,7 +48,7 @@ class Orchestrator:
         return self._tools.get(name)
 
     def run_tool(self, name: str, target: str, **kwargs) -> ToolResult:
-        """Run a single tool by name."""
+        """Run a single tool by name (target already resolved)."""
         tool = self.get_tool(name)
         if tool is None:
             logger.warning("Unknown tool requested: %s", name)
@@ -61,13 +63,28 @@ class Orchestrator:
         logger.info("Running tool %s against %s", name, target)
         return tool.run(target, timeout=self.timeout, **kwargs)
 
+    def run_tool_resolved(self, name: str, raw_target: str, **kwargs) -> ToolResult:
+        """Resolve the target for a specific tool, then run it."""
+        tool = self.get_tool(name)
+        if tool is not None and tool.accepted_target_types:
+            resolved = self.resolver.resolve(raw_target)
+            effective = resolved.get_for(tool.accepted_target_types)
+            logger.info(
+                "Resolved %r → %r for tool %s (wants %s)",
+                raw_target, effective, name,
+                [t.value for t in tool.accepted_target_types],
+            )
+        else:
+            effective = raw_target
+        return self.run_tool(name, effective, **kwargs)
+
     def run_profile(
         self,
         target: str,
         profile_name: str,
         output_dir: Path,
     ) -> ReconReport:
-        """Run all tools in a scan profile."""
+        """Run all tools in a scan profile, resolving the target for each tool."""
         profile = self.config.get_profile(profile_name)
         if profile is None:
             logger.error("Profile not found: %s", profile_name)
@@ -79,6 +96,19 @@ class Orchestrator:
                 authorization_confirmed=True,
                 tools_failed=["profile_not_found"],
             )
+
+        # Resolve the target once for all tools
+        resolved = self.resolver.resolve(target)
+        if self.verbose:
+            console.print(f"  [dim]Target resolved: {target!r} → detected as {resolved.detected_type.value} ({resolved.confidence:.0%})[/dim]")
+            if resolved.domain:
+                console.print(f"  [dim]  domain: {resolved.domain}[/dim]")
+            if resolved.github_handle:
+                console.print(f"  [dim]  github: {resolved.github_handle}[/dim]")
+            if resolved.org_name:
+                console.print(f"  [dim]  org:    {resolved.org_name}[/dim]")
+            if resolved.person_name:
+                console.print(f"  [dim]  person: {resolved.person_name}[/dim]")
 
         tool_configs = profile.get("tools", [])
         tool_names = []
@@ -113,7 +143,7 @@ class Orchestrator:
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
                 futures = {
                     pool.submit(
-                        self._run_single, name, target, tool_kwargs.get(name, {})
+                        self._run_single, name, resolved, tool_kwargs.get(name, {})
                     ): name
                     for name in parallel_batch
                 }
@@ -127,7 +157,7 @@ class Orchestrator:
                         executed.append(name)
         else:
             for name in parallel_batch:
-                result = self._run_single(name, target, tool_kwargs.get(name, {}))
+                result = self._run_single(name, resolved, tool_kwargs.get(name, {}))
                 results.append(result)
                 if result.errors:
                     failed.append(name)
@@ -136,7 +166,7 @@ class Orchestrator:
 
         # Run sequential batch
         for name in sequential_batch:
-            result = self._run_single(name, target, tool_kwargs.get(name, {}))
+            result = self._run_single(name, resolved, tool_kwargs.get(name, {}))
             results.append(result)
             if result.errors:
                 failed.append(name)
@@ -154,6 +184,7 @@ class Orchestrator:
 
         report = ReconReport(
             target=target,
+            resolved_target=resolved.summary_dict(),
             scan_profile=profile_name,
             start_time=start_time,
             end_time=datetime.now(timezone.utc),
@@ -164,10 +195,18 @@ class Orchestrator:
         )
         return report.deduplicate()
 
-    def _run_single(self, name: str, target: str, kwargs: dict) -> ToolResult:
-        """Run a single tool with logging."""
-        console.print(f"  [cyan]▶[/cyan] {name}")
-        result = self.run_tool(name, target, **kwargs)
+    def _run_single(
+        self, name: str, resolved: ResolvedTarget, kwargs: dict
+    ) -> ToolResult:
+        """Pick the right target variant for a tool and run it."""
+        tool = self.get_tool(name)
+        if tool is not None and tool.accepted_target_types:
+            effective_target = resolved.get_for(tool.accepted_target_types)
+        else:
+            effective_target = resolved.raw
+
+        console.print(f"  [cyan]▶[/cyan] {name} → [dim]{effective_target}[/dim]")
+        result = self.run_tool(name, effective_target, **kwargs)
         if result.errors:
             logger.warning("Tool %s failed: %s", name, result.errors[0])
             console.print(f"  [red]✗[/red] {name}: {result.errors[0]}")
