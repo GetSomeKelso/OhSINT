@@ -21,7 +21,7 @@ class DataSploit(BaseTool):
     description = "OSINT visualizer — aggregates Shodan, Censys, Clearbit"
     binary_name = "python3"
     install_cmd = "git clone https://github.com/upgoingstar/datasploit.git /opt/tools/datasploit"
-    requires_api_keys = ["shodan.api_key"]
+    requires_api_keys = ("shodan.api_key",)
 
     def is_installed(self) -> bool:
         """Check if the datasploit directory exists."""

@@ -79,7 +79,7 @@ class DorkCli(BaseTool):
     description = "Google dork queries with built-in dork library and rate limiting"
     binary_name = "dork"
     install_cmd = "pip install dork-cli"
-    requires_api_keys = []
+    requires_api_keys = ()
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         query = kwargs.get("query", f"site:{target}")

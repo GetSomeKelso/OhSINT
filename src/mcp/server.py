@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import json
+import logging
 import os
 import sys
 from datetime import datetime
@@ -22,12 +22,29 @@ from mcp.server.fastmcp import FastMCP
 
 from src.config import Config, DEFAULT_RESULTS_DIR, DEFAULT_TIMEOUT
 from src.orchestrator import Orchestrator
+from src.report import save_report
+
+logger = logging.getLogger("ohsint.mcp")
 
 mcp = FastMCP("OhSINT OSINT Orchestrator")
 
-# Shared state
-_config = Config()
-_orchestrator = Orchestrator(config=_config, verbose=True)
+# Shared state — lazy-initialized on first use so config can be loaded after import
+_config: Config | None = None
+_orchestrator: Orchestrator | None = None
+
+
+def _get_config() -> Config:
+    global _config
+    if _config is None:
+        _config = Config()
+    return _config
+
+
+def _get_orchestrator() -> Orchestrator:
+    global _orchestrator
+    if _orchestrator is None:
+        _orchestrator = Orchestrator(config=_get_config(), verbose=True)
+    return _orchestrator
 
 
 def _require_auth(authorization_confirmed: bool) -> None:
@@ -43,7 +60,7 @@ def _require_auth(authorization_confirmed: bool) -> None:
 # Full recon
 # ---------------------------------------------------------------------------
 @mcp.tool()
-def osint_full_recon(
+async def osint_full_recon(
     target: str,
     profile: str = "passive",
     authorization_confirmed: bool = False,
@@ -60,17 +77,14 @@ def osint_full_recon(
     safe_target = target.replace("/", "_").replace(":", "_")
     output_dir = DEFAULT_RESULTS_DIR / safe_target / timestamp
 
-    orchestrator = Orchestrator(config=_config, timeout=timeout, verbose=True)
-    report = orchestrator.run_profile(target, profile, output_dir)
+    orchestrator = Orchestrator(config=_get_config(), timeout=timeout, verbose=True)
+    report = await asyncio.to_thread(
+        orchestrator.run_profile, target, profile, output_dir
+    )
 
-    # Save reports
-    output_dir.mkdir(parents=True, exist_ok=True)
-    if output_format in ("json", "all"):
-        (output_dir / "report.json").write_text(report.model_dump_json(indent=2))
-    if output_format in ("md", "all"):
-        (output_dir / "report.md").write_text(report.to_markdown())
-    if output_format in ("html", "all"):
-        (output_dir / "report.html").write_text(report.to_html())
+    # Save reports using centralized helper
+    save_report(report, output_dir, output_format)
+    logger.info("Full recon complete: %d findings for %s", len(report.findings), target)
 
     return report.to_markdown()
 
@@ -79,7 +93,7 @@ def osint_full_recon(
 # Individual tool wrappers
 # ---------------------------------------------------------------------------
 @mcp.tool()
-def osint_theharvester(
+async def osint_theharvester(
     domain: str,
     sources: str = "all",
     limit: int = 500,
@@ -87,14 +101,15 @@ def osint_theharvester(
 ) -> str:
     """Harvest emails, subdomains, IPs from search engines for a domain."""
     _require_auth(authorization_confirmed)
-    result = _orchestrator.run_tool(
-        "theharvester", domain, sources=sources, limit=limit
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "theharvester", domain, sources=sources, limit=limit,
     )
     return _format_result(result)
 
 
 @mcp.tool()
-def osint_spiderfoot(
+async def osint_spiderfoot(
     target: str,
     use_case: str = "all",
     output_format: str = "json",
@@ -105,14 +120,15 @@ def osint_spiderfoot(
     use_case options: all, footprint, investigate, passive.
     """
     _require_auth(authorization_confirmed)
-    result = _orchestrator.run_tool(
-        "spiderfoot", target, use_case=use_case, output_format=output_format
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "spiderfoot", target, use_case=use_case, output_format=output_format,
     )
     return _format_result(result)
 
 
 @mcp.tool()
-def osint_recon_ng(
+async def osint_recon_ng(
     target: str,
     modules: str = "passive",
     authorization_confirmed: bool = False,
@@ -122,12 +138,15 @@ def osint_recon_ng(
     modules options: passive, active_set.
     """
     _require_auth(authorization_confirmed)
-    result = _orchestrator.run_tool("recon_ng", target, modules=modules)
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "recon_ng", target, modules=modules,
+    )
     return _format_result(result)
 
 
 @mcp.tool()
-def osint_metagoofil(
+async def osint_metagoofil(
     domain: str,
     filetypes: str = "pdf,doc,xls,ppt,docx,xlsx,pptx",
     max_results: int = 100,
@@ -135,14 +154,15 @@ def osint_metagoofil(
 ) -> str:
     """Harvest and analyze document metadata from a domain."""
     _require_auth(authorization_confirmed)
-    result = _orchestrator.run_tool(
-        "metagoofil", domain, filetypes=filetypes, max_results=max_results
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "metagoofil", domain, filetypes=filetypes, max_results=max_results,
     )
     return _format_result(result)
 
 
 @mcp.tool()
-def osint_shodan(
+async def osint_shodan(
     query: str,
     mode: str = "search",
     authorization_confirmed: bool = False,
@@ -152,26 +172,30 @@ def osint_shodan(
     mode options: search, host, domain.
     """
     _require_auth(authorization_confirmed)
-    result = _orchestrator.run_tool("shodan", query, mode=mode)
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "shodan", query, mode=mode,
+    )
     return _format_result(result)
 
 
 @mcp.tool()
-def osint_exiftool(
+async def osint_exiftool(
     directory: str,
     filter_fields: str = "Author|Creator|Email|Producer|Template|Software",
     authorization_confirmed: bool = False,
 ) -> str:
     """Extract metadata from downloaded files in a directory."""
     _require_auth(authorization_confirmed)
-    result = _orchestrator.run_tool(
-        "exiftool", directory, filter_fields=filter_fields
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "exiftool", directory, filter_fields=filter_fields,
     )
     return _format_result(result)
 
 
 @mcp.tool()
-def osint_github_dorks(
+async def osint_github_dorks(
     target: str,
     dork_file: str = "",
     authorization_confirmed: bool = False,
@@ -181,12 +205,15 @@ def osint_github_dorks(
     kwargs = {}
     if dork_file:
         kwargs["dork_file"] = dork_file
-    result = _orchestrator.run_tool("github_dorks", target, **kwargs)
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "github_dorks", target, **kwargs,
+    )
     return _format_result(result)
 
 
 @mcp.tool()
-def osint_google_dorks(
+async def osint_google_dorks(
     domain: str,
     dork_category: str = "all",
     authorization_confirmed: bool = False,
@@ -196,45 +223,116 @@ def osint_google_dorks(
     Categories: all, ghdb_passive, filetype_dorks, login_dorks, sensitive_dorks, directories.
     """
     _require_auth(authorization_confirmed)
-    result = _orchestrator.run_tool(
-        "dork_cli", domain, dork_category=dork_category
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "dork_cli", domain, dork_category=dork_category,
     )
     return _format_result(result)
 
 
 @mcp.tool()
-def osint_xray(
+async def osint_xray(
     target: str,
     mode: str = "full",
     authorization_confirmed: bool = False,
 ) -> str:
     """Run XRay network recon against a target."""
     _require_auth(authorization_confirmed)
-    result = _orchestrator.run_tool("xray", target, mode=mode)
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "xray", target, mode=mode,
+    )
     return _format_result(result)
 
 
 @mcp.tool()
-def osint_datasploit(
+async def osint_datasploit(
     target: str,
     target_type: str = "domain",
     authorization_confirmed: bool = False,
 ) -> str:
     """Run DataSploit OSINT visualizer. target_type: domain, email, ip, person."""
     _require_auth(authorization_confirmed)
-    result = _orchestrator.run_tool(
-        "datasploit", target, target_type=target_type
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "datasploit", target, target_type=target_type,
+    )
+    return _format_result(result)
+
+
+# --- Previously missing tool endpoints ---
+
+
+@mcp.tool()
+async def osint_snitch(
+    target: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Run Snitch information gathering via dorks against a target."""
+    _require_auth(authorization_confirmed)
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "snitch", target,
     )
     return _format_result(result)
 
 
 @mcp.tool()
-def osint_report(
+async def osint_vcsmap(
+    target: str,
+    mode: str = "full",
+    authorization_confirmed: bool = False,
+) -> str:
+    """Scan public version control systems for sensitive info about a target."""
+    _require_auth(authorization_confirmed)
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "vcsmap", target, mode=mode,
+    )
+    return _format_result(result)
+
+
+@mcp.tool()
+async def osint_creepy(
+    target: str,
+    mode: str = "social",
+    authorization_confirmed: bool = False,
+) -> str:
+    """Geolocation OSINT from social media profiles."""
+    _require_auth(authorization_confirmed)
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "creepy", target, mode=mode,
+    )
+    return _format_result(result)
+
+
+@mcp.tool()
+async def osint_goodork(
+    target: str,
+    query: str = "",
+    pages: int = 3,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Run GooDork Google dorking from CLI against a target."""
+    _require_auth(authorization_confirmed)
+    kwargs: dict[str, Any] = {"pages": pages}
+    if query:
+        kwargs["query"] = query
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool,
+        "goodork", target, **kwargs,
+    )
+    return _format_result(result)
+
+
+@mcp.tool()
+async def osint_report(
     results_dir: str,
-    format: str = "all",
+    output_format: str = "all",
 ) -> str:
     """Generate a consolidated report from scan results in a directory."""
-    from src.report import load_report, save_report
+    from src.report import load_report
 
     path = Path(results_dir)
     json_file = path / "report.json"
@@ -242,7 +340,7 @@ def osint_report(
         return f"No report.json found in {results_dir}"
 
     report = load_report(json_file)
-    save_report(report, path, format)
+    save_report(report, path, output_format)
     return report.to_markdown()
 
 
@@ -250,30 +348,31 @@ def osint_report(
 # Utility tools
 # ---------------------------------------------------------------------------
 @mcp.tool()
-def osint_list_tools() -> str:
+async def osint_list_tools() -> str:
     """List all available OSINT tools and their installation status."""
     lines = ["| Tool | Installed | Description |", "|------|-----------|-------------|"]
-    for t in _orchestrator.all_tools():
+    for t in _get_orchestrator().all_tools():
         status = "Yes" if t.is_installed() else "No"
         lines.append(f"| {t.name} | {status} | {t.description} |")
     return "\n".join(lines)
 
 
 @mcp.tool()
-def osint_install_check() -> str:
+async def osint_install_check() -> str:
     """Check which tools are installed and which API keys are configured."""
     lines = ["## Tool Installation"]
-    for t in _orchestrator.all_tools():
+    for t in _get_orchestrator().all_tools():
         icon = "[OK]" if t.is_installed() else "[MISSING]"
         lines.append(f"  {icon} {t.name} ({t.binary_name})")
         if not t.is_installed():
             lines.append(f"        Install: {t.install_cmd}")
 
     lines.append("\n## API Keys")
-    if not _config.api_keys_file_exists():
+    config = _get_config()
+    if not config.api_keys_file_exists():
         lines.append("  [WARN] No api_keys.yaml found")
     else:
-        for t in _orchestrator.all_tools():
+        for t in _get_orchestrator().all_tools():
             missing = t.check_api_keys()
             if missing:
                 lines.append(f"  [WARN] {t.name} missing: {', '.join(missing)}")
@@ -296,7 +395,8 @@ def _format_result(result: Any) -> str:
     parts.append(f"**Time:** {result.execution_time_seconds:.1f}s")
 
     if result.errors:
-        parts.append(f"\n### Errors")
+        parts.append("")
+        parts.append("### Errors")
         for err in result.errors:
             parts.append(f"- {err}")
 
@@ -335,6 +435,12 @@ def main():
     Designed to run inside a Kali/Parrot VM with port forwarding
     to the Windows host where Claude Desktop connects.
     """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    logger.info("Starting OhSINT MCP server on 127.0.0.1:8055")
     mcp.run(transport="sse", host="127.0.0.1", port=8055)
 
 

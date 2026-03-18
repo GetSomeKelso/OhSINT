@@ -48,7 +48,7 @@ class GithubDorks(BaseTool):
     description = "Scan GitHub repos/orgs for sensitive information leaks"
     binary_name = "github-dorks"
     install_cmd = "pip install github-dorks"
-    requires_api_keys = ["github_dorks.github_token"]
+    requires_api_keys = ("github_dorks.github_token",)
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         dork_file = kwargs.get("dork_file")

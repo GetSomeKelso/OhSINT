@@ -18,7 +18,7 @@ class GooDork(BaseTool):
     description = "Google dorking from the command line"
     binary_name = "GooDork"
     install_cmd = "go install github.com/k3170makan/GooDork@latest"
-    requires_api_keys = []
+    requires_api_keys = ()
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         query = kwargs.get("query", f"site:{target}")

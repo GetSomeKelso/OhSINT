@@ -47,7 +47,7 @@ class ExifTool(BaseTool):
     description = "Extract metadata from downloaded files"
     binary_name = "exiftool"
     install_cmd = "apt install libimage-exiftool-perl"
-    requires_api_keys = []
+    requires_api_keys = ()
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         """target is a directory or file path for exiftool."""

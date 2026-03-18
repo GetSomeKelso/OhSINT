@@ -42,10 +42,10 @@ class ReconNg(BaseTool):
     description = "Modular recon framework (Metasploit-style)"
     binary_name = "recon-ng"
     install_cmd = "pip install recon-ng"
-    requires_api_keys = [
+    requires_api_keys = (
         "recon_ng.shodan_api",
         "recon_ng.bing_api",
-    ]
+    )
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         workspace = kwargs.get("workspace", f"ohsint_{target.replace('.', '_')}")

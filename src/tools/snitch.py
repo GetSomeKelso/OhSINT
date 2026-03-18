@@ -21,7 +21,7 @@ class Snitch(BaseTool):
     description = "Information gathering via dorks"
     binary_name = "python3"
     install_cmd = "git clone https://github.com/Smaash/snitch.git /opt/tools/snitch"
-    requires_api_keys = []
+    requires_api_keys = ()
 
     def is_installed(self) -> bool:
         return SNITCH_DIR.exists() and (SNITCH_DIR / "snitch.py").exists()

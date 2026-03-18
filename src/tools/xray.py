@@ -17,7 +17,7 @@ class XRay(BaseTool):
     description = "Network recon and OSINT from public networks"
     binary_name = "xray"
     install_cmd = "go install github.com/evilsocket/xray@latest"
-    requires_api_keys = ["shodan.api_key"]
+    requires_api_keys = ("shodan.api_key",)
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         mode = kwargs.get("mode", "full")

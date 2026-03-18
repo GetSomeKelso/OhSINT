@@ -16,7 +16,7 @@ class VcsMap(BaseTool):
     description = "Scan public version control systems for sensitive info"
     binary_name = "vcsmap"
     install_cmd = "gem install vcsmap"
-    requires_api_keys = []
+    requires_api_keys = ()
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         mode = kwargs.get("mode", "full")

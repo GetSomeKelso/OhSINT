@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
+
+
+def _utcnow() -> datetime:
+    """Return timezone-aware UTC now (avoids deprecated datetime.utcnow())."""
+    return datetime.now(timezone.utc)
 
 
 class IntelType(str, Enum):
@@ -46,7 +51,7 @@ class IntelFinding(BaseModel):
     source_tool: str
     confidence: float = Field(ge=0.0, le=1.0)
     raw_data: Optional[dict] = None
-    first_seen: datetime = Field(default_factory=datetime.utcnow)
+    first_seen: datetime = Field(default_factory=_utcnow)
     tags: List[str] = Field(default_factory=list)
 
     def merge_with(self, other: IntelFinding) -> IntelFinding:

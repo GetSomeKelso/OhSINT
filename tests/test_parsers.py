@@ -301,7 +301,7 @@ class TestCreepy:
 class TestModels:
     def test_deduplication(self):
         from src.models import IntelFinding, ReconReport
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         f1 = IntelFinding(
             type=IntelType.EMAIL, value="admin@example.com",
@@ -318,8 +318,8 @@ class TestModels:
         report = ReconReport(
             target="example.com",
             scan_profile="passive",
-            start_time=datetime.utcnow(),
-            end_time=datetime.utcnow(),
+            start_time=datetime.now(timezone.utc),
+            end_time=datetime.now(timezone.utc),
             authorization_confirmed=True,
             findings=[f1, f2, f3],
         )
@@ -332,7 +332,7 @@ class TestModels:
 
     def test_markdown_report(self):
         from src.models import IntelFinding, ReconReport
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         report = ReconReport(
             target="example.com",
@@ -356,7 +356,7 @@ class TestModels:
 
     def test_html_report(self):
         from src.models import IntelFinding, ReconReport
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         report = ReconReport(
             target="example.com",

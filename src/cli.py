@@ -15,12 +15,15 @@ if sys.platform == "win32":
     if hasattr(sys.stderr, "reconfigure"):
         sys.stderr.reconfigure(encoding="utf-8")
 
+import logging
+
 import click
 from rich.console import Console
 from rich.table import Table
 
 from src.config import Config, DEFAULT_RESULTS_DIR, DEFAULT_TIMEOUT
 from src.orchestrator import Orchestrator
+from src.report import save_report
 
 console = Console()
 
@@ -104,6 +107,14 @@ def cli(ctx, authorization, output, output_format, timeout, parallel, verbose, d
     ctx.obj["dry_run"] = dry_run
     ctx.obj["config"] = Config()
 
+    # Configure logging
+    log_level = logging.DEBUG if verbose else logging.WARNING
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
 
 @cli.command()
 @click.option("--target", "-t", required=True, help="Target (domain, IP, email, person name, org).")
@@ -135,7 +146,8 @@ def full_recon(ctx, target, profile):
     console.print(f"Results -> {output_dir}\n")
     report = orchestrator.run_profile(target, profile, output_dir)
 
-    _save_report(report, output_dir, ctx.obj["output_format"])
+    save_report(report, output_dir, ctx.obj["output_format"])
+    console.print(f"\n[green]Reports saved to {output_dir}[/green]")
     _print_summary(report)
 
 
@@ -269,17 +281,6 @@ def _resolve_output_dir(ctx: click.Context, target: str) -> Path:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_target = target.replace("/", "_").replace(":", "_")
     return DEFAULT_RESULTS_DIR / safe_target / timestamp
-
-
-def _save_report(report, output_dir: Path, fmt: str) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    if fmt in ("json", "all"):
-        (output_dir / "report.json").write_text(report.model_dump_json(indent=2))
-    if fmt in ("md", "all"):
-        (output_dir / "report.md").write_text(report.to_markdown())
-    if fmt in ("html", "all"):
-        (output_dir / "report.html").write_text(report.to_html())
-    console.print(f"\n[green]Reports saved to {output_dir}[/green]")
 
 
 def _print_summary(report) -> None:

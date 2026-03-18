@@ -19,7 +19,7 @@ class Metagoofil(BaseTool):
     description = "Harvest document metadata from a domain (PDF/DOC/XLS)"
     binary_name = "metagoofil"
     install_cmd = "pip install metagoofil"
-    requires_api_keys = []
+    requires_api_keys = ()
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         filetypes = kwargs.get("filetypes", "pdf,doc,xls,ppt,docx,xlsx,pptx")

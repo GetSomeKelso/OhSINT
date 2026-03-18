@@ -20,7 +20,7 @@ class Creepy(BaseTool):
     description = "Geolocation OSINT from social media profiles"
     binary_name = "python3"
     install_cmd = "git clone https://github.com/ilektrojohn/creepy.git /opt/tools/creepy"
-    requires_api_keys = []
+    requires_api_keys = ()
 
     def is_installed(self) -> bool:
         return CREEPY_DIR.exists() and (CREEPY_DIR / "CreepyMain.py").exists()

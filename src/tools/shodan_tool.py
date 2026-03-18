@@ -16,7 +16,7 @@ class ShodanTool(BaseTool):
     description = "Search Shodan for internet-connected devices and services"
     binary_name = "shodan"
     install_cmd = "pip install shodan"
-    requires_api_keys = ["shodan.api_key"]
+    requires_api_keys = ("shodan.api_key",)
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         mode = kwargs.get("mode", "search")

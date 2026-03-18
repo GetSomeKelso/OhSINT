@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import concurrent.futures
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -14,6 +15,7 @@ from src.models import IntelFinding, ReconReport, ToolResult
 from src.tools.base import BaseTool
 
 console = Console()
+logger = logging.getLogger("ohsint.orchestrator")
 
 
 class Orchestrator:
@@ -47,6 +49,7 @@ class Orchestrator:
         """Run a single tool by name."""
         tool = self.get_tool(name)
         if tool is None:
+            logger.warning("Unknown tool requested: %s", name)
             return ToolResult(
                 tool_name=name,
                 target=target,
@@ -55,6 +58,7 @@ class Orchestrator:
             )
         if self.verbose:
             console.print(f"  [dim]Running {name}...[/dim]")
+        logger.info("Running tool %s against %s", name, target)
         return tool.run(target, timeout=self.timeout, **kwargs)
 
     def run_profile(
@@ -66,11 +70,12 @@ class Orchestrator:
         """Run all tools in a scan profile."""
         profile = self.config.get_profile(profile_name)
         if profile is None:
+            logger.error("Profile not found: %s", profile_name)
             return ReconReport(
                 target=target,
                 scan_profile=profile_name,
-                start_time=datetime.utcnow(),
-                end_time=datetime.utcnow(),
+                start_time=datetime.now(timezone.utc),
+                end_time=datetime.now(timezone.utc),
                 authorization_confirmed=True,
                 tools_failed=["profile_not_found"],
             )
@@ -87,7 +92,7 @@ class Orchestrator:
                     tool_names.append(tname)
                     tool_kwargs[tname] = tconf if isinstance(tconf, dict) else {}
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         results: List[ToolResult] = []
         executed: List[str] = []
         failed: List[str] = []
@@ -97,6 +102,11 @@ class Orchestrator:
         parallel_batch = [n for n in tool_names if n not in sequential_tools and n in self._tools]
         sequential_batch = [n for n in tool_names if n in sequential_tools and n in self._tools]
         skipped = [n for n in tool_names if n not in self._tools]
+
+        logger.info(
+            "Profile %s: %d parallel, %d sequential, %d skipped",
+            profile_name, len(parallel_batch), len(sequential_batch), len(skipped),
+        )
 
         # Run parallel batch
         if self.parallel and len(parallel_batch) > 1:
@@ -134,6 +144,7 @@ class Orchestrator:
                 executed.append(name)
 
         for name in skipped:
+            logger.warning("Tool %s not registered, skipping", name)
             failed.append(name)
 
         # Build report
@@ -145,7 +156,7 @@ class Orchestrator:
             target=target,
             scan_profile=profile_name,
             start_time=start_time,
-            end_time=datetime.utcnow(),
+            end_time=datetime.now(timezone.utc),
             authorization_confirmed=True,
             tools_executed=executed,
             tools_failed=failed,
@@ -158,8 +169,10 @@ class Orchestrator:
         console.print(f"  [cyan]▶[/cyan] {name}")
         result = self.run_tool(name, target, **kwargs)
         if result.errors:
+            logger.warning("Tool %s failed: %s", name, result.errors[0])
             console.print(f"  [red]✗[/red] {name}: {result.errors[0]}")
         else:
+            logger.info("Tool %s completed in %.1fs", name, result.execution_time_seconds)
             console.print(
                 f"  [green]✓[/green] {name} ({result.execution_time_seconds:.1f}s)"
             )
@@ -171,6 +184,9 @@ class Orchestrator:
         for finding_data in result.structured_data.get("findings", []):
             try:
                 findings.append(IntelFinding(**finding_data))
-            except Exception:
-                pass  # Skip malformed findings
+            except Exception as exc:
+                logger.debug(
+                    "Skipping malformed finding from %s: %s (data: %s)",
+                    result.tool_name, exc, finding_data,
+                )
         return findings

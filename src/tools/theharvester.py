@@ -6,7 +6,7 @@ import json
 import re
 from typing import List
 
-from src.models import IntelFinding, IntelType, ToolResult
+from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.tools.base import BaseTool
 
@@ -17,11 +17,11 @@ class TheHarvester(BaseTool):
     description = "Harvest emails, subdomains, IPs from search engines"
     binary_name = "theHarvester"
     install_cmd = "pip install theHarvester"
-    requires_api_keys = [
+    requires_api_keys = (
         "theharvester.bing_api",
         "theharvester.github_token",
         "theharvester.hunter_api",
-    ]
+    )
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         sources = kwargs.get("sources", "all")

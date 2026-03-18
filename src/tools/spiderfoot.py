@@ -38,10 +38,10 @@ class SpiderFoot(BaseTool):
     description = "Multi-source OSINT automation (200+ modules)"
     binary_name = "spiderfoot"
     install_cmd = "pip install spiderfoot"
-    requires_api_keys = [
+    requires_api_keys = (
         "spiderfoot.virustotal",
         "spiderfoot.censys_id",
-    ]
+    )
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         use_case = kwargs.get("use_case", "all")
