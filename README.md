@@ -78,10 +78,14 @@ src/
 
 ```bash
 # Clone the repo
-git clone <repo-url> /opt/ohsint
-cd /opt/ohsint
+git clone https://github.com/GetSomeKelso/OhSINT.git ~/Tools/OhSINT
+cd ~/Tools/OhSINT
 
-# Install the Python package
+# Create a virtual environment and activate it
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install the Python package (editable mode)
 pip install -e .
 
 # Install OSINT tools (most are pre-installed on Kali)
@@ -94,6 +98,8 @@ gem install vcsmap
 # Verify installation
 osint-orchestrator install-check
 ```
+
+> **Note:** Always activate the venv (`source .venv/bin/activate`) before running `osint-orchestrator` or `ohsint-mcp`.
 
 ### 2. Configure API Keys
 
