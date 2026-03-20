@@ -6,7 +6,6 @@ shodan:
   api_key: ""
 
 theharvester:
-  bing_api: ""
   github_token: ""
   hunter_api: ""
   intelx_api: ""
@@ -21,7 +20,6 @@ spiderfoot:
   ipinfo: ""
 
 recon_ng:
-  bing_api: ""
   builtwith_api: ""
   github_api: ""
   google_api: ""

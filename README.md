@@ -127,9 +127,9 @@ cp configs/api_keys.yaml.example configs/api_keys.yaml
 Edit `configs/api_keys.yaml` with your keys:
 
 - **Shodan** — `api_key`
-- **theHarvester** — `bing_api`, `github_token`, `hunter_api`, `intelx_api`, `securitytrails_api`
+- **theHarvester** — `github_token`, `hunter_api`, `intelx_api`, `securitytrails_api`
 - **SpiderFoot** — `virustotal`, `censys_id`, `censys_secret`, `fullcontact`, `hunter`, `ipinfo`
-- **recon-ng** — `bing_api`, `builtwith_api`, `github_api`, `google_api`, `shodan_api`, `virustotal_api`, etc.
+- **recon-ng** — `builtwith_api`, `github_api`, `google_api`, `shodan_api`, `virustotal_api`, etc.
 - **github-dorks** — `github_token`
 
 API keys can also be set via environment variables: `OSINT_<TOOL>_<KEY>` (uppercased).
