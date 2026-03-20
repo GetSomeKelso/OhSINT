@@ -20,7 +20,7 @@ _GITHUB_DORKS_SEARCH_PATHS = [
 def _find_github_dorks_dir() -> Path | None:
     """Return the first github-dorks source directory that exists."""
     for p in _GITHUB_DORKS_SEARCH_PATHS:
-        if p.exists() and (p / "github-dorks.py").exists():
+        if p.exists() and (p / "github-dork.py").exists():
             return p
     return None
 
@@ -80,7 +80,7 @@ class GithubDorks(BaseTool):
             return [self.binary_name]
         src_dir = _find_github_dorks_dir()
         if src_dir:
-            return ["python3", str(src_dir / "github-dorks.py")]
+            return ["python3", str(src_dir / "github-dork.py")]
         return [self.binary_name]
 
     def build_command(self, target: str, **kwargs) -> List[str]:
