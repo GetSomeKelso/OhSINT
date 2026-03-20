@@ -20,6 +20,10 @@ _CREEPY_SEARCH_PATHS = [
 
 def _find_creepy_dir() -> Path | None:
     for p in _CREEPY_SEARCH_PATHS:
+        # CreepyMain.py lives inside a nested creepy/ subdirectory
+        if p.exists() and (p / "creepy" / "CreepyMain.py").exists():
+            return p / "creepy"
+        # Also check if it's at the top level
         if p.exists() and (p / "CreepyMain.py").exists():
             return p
     return None
