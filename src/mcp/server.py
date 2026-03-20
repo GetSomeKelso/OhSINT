@@ -482,22 +482,24 @@ def main():
 
     logger.info(f"Starting OhSINT MCP server on {args.host}:{args.port}")
 
-    # MCP 1.26+ validates Host headers via transport_security.py,
+    # MCP 1.26+ validates Host headers via TransportSecurityMiddleware,
     # rejecting requests with IP-based Host headers (e.g., from Hyper-V).
-    # Disable this validation when binding to 0.0.0.0.
+    # Disable DNS rebinding protection when binding to 0.0.0.0.
     if args.host == "0.0.0.0":
-        try:
-            import mcp.server.transport_security as ts
-            # Patch the validation to accept all hosts
-            if hasattr(ts, "validate_request"):
-                ts._original_validate_request = ts.validate_request
-                ts.validate_request = lambda *a, **kw: None
-            # Also try patching the class-based approach
-            if hasattr(ts, "TransportSecurity"):
-                orig_check = ts.TransportSecurity.check_request
-                ts.TransportSecurity.check_request = lambda self, *a, **kw: None
-        except (ImportError, AttributeError) as e:
-            logger.warning(f"Could not disable host validation: {e}")
+        from mcp.server.transport_security import TransportSecurityMiddleware
+
+        # Patch validate_request to always pass (return None)
+        TransportSecurityMiddleware.validate_request = staticmethod(
+            lambda *a, **kw: None
+        )
+        # Make it an async function that returns None
+        import asyncio
+
+        async def _allow_all(self, request, is_post=False):
+            return None
+
+        TransportSecurityMiddleware.validate_request = _allow_all
+        logger.info("DNS rebinding protection disabled (binding to 0.0.0.0)")
 
     mcp.run(transport="sse")
 
