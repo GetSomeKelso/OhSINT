@@ -483,26 +483,25 @@ def main():
     logger.info(f"Starting OhSINT MCP server on {args.host}:{args.port}")
 
     # MCP 1.26+ validates Host headers, blocking requests from IPs.
-    # When binding to 0.0.0.0 (e.g., Hyper-V), we need to allow all hosts.
+    # When binding to 0.0.0.0 (e.g., Hyper-V), rewrite the Host header
+    # to localhost before it reaches the MCP SSE app's validation.
     if args.host == "0.0.0.0":
         import uvicorn
-        from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-        # Get the ASGI app that FastMCP builds for SSE transport
         app = mcp.sse_app()
 
-        # Wrap it to allow any Host header
-        from starlette.applications import Starlette
-        from starlette.middleware import Middleware
-        from starlette.routing import Mount
-        wrapper = Starlette(
-            routes=[Mount("/", app=app)],
-            middleware=[
-                Middleware(TrustedHostMiddleware, allowed_hosts=["*"]),
-            ],
-        )
+        async def host_rewrite_wrapper(scope, receive, send):
+            if scope["type"] == "http":
+                # Rewrite Host header to localhost so MCP's validation passes
+                headers = []
+                for name, value in scope.get("headers", []):
+                    if name == b"host":
+                        value = f"localhost:{args.port}".encode()
+                    headers.append((name, value))
+                scope = dict(scope, headers=headers)
+            await app(scope, receive, send)
 
-        uvicorn.run(wrapper, host=args.host, port=args.port)
+        uvicorn.run(host_rewrite_wrapper, host=args.host, port=args.port)
     else:
         mcp.run(transport="sse")
 
