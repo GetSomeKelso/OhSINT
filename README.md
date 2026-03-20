@@ -1,36 +1,35 @@
 # OhSINT
 
-Unified OSINT reconnaissance orchestrator that wraps 14 open-source intelligence tools behind a single CLI and MCP server. Designed to run on Kali or Parrot Linux and connect to Claude Desktop on a Windows host via SSE.
+Unified OSINT reconnaissance orchestrator that wraps 15 open-source intelligence tools behind a single CLI and MCP server. Designed to run on Kali Linux and connect to Claude Desktop on a Windows host via SSE.
 
 ## Tools
 
 ### Tier 1 — CLI-Native, Actively Maintained
 
-| Tool | Binary | Description |
-|------|--------|-------------|
-| theHarvester | `theHarvester` | Harvest emails, subdomains, IPs from search engines |
-| SpiderFoot | `spiderfoot` | Automated OSINT with 200+ modules |
-| recon-ng | `recon-ng` | Modular web reconnaissance framework |
-| Metagoofil | `metagoofil` | Document metadata harvesting |
-| Shodan | `shodan` | Internet-connected device search |
-| ExifTool | `exiftool` | File metadata extraction |
-| github-dorks | `github-dorks` | GitHub sensitive information scanner |
+| Tool | Description | Install Method |
+|------|-------------|----------------|
+| theHarvester | Harvest emails, subdomains, IPs from search engines | `apt` (Kali) |
+| SpiderFoot | Automated OSINT with 200+ modules | `apt` (Kali) |
+| recon-ng | Modular web reconnaissance framework | `apt` (Kali) |
+| Metagoofil | Document metadata harvesting | git clone |
+| Shodan | Internet-connected device search | `pip` |
+| ExifTool | File metadata extraction | `apt` |
+| github-dorks | GitHub sensitive information scanner | git clone |
 
-### Tier 2 — CLI-Compatible, May Need Wrapper Logic
+### Tier 2 — CLI-Compatible
 
-| Tool | Binary | Description |
-|------|--------|-------------|
-| XRay | `xray` | Network reconnaissance (Go, archived) |
-| GooDork | `GooDork.py` | Google dorking (Python) |
-| dork-cli | `dork-cli` | Google dork query runner |
-| DataSploit | `datasploit` | OSINT visualizer |
-| Snitch | `snitch` | Information gathering via dorks |
-| VcsMap | `vcsmap` | Version control system mapper (Ruby) |
-| Creepy | `creepy` | Geolocation OSINT |
+| Tool | Description | Install Method |
+|------|-------------|----------------|
+| Brave Search | Web search API for OSINT recon (replaces Bing) | API-based (httpx) |
+| XRay | Network reconnaissance (Go, archived) | git clone + go build |
+| GooDork | Google dorking (Python, not Go) | git clone |
+| dork-cli | Google dork query runner | git clone |
+| DataSploit | OSINT visualizer | git clone |
+| Snitch | Information gathering via dorks | git clone |
+| VcsMap | Version control system mapper | `gem` (Ruby) |
+| Creepy | Geolocation OSINT | git clone |
 
 ## Scan Profiles
-
-Profiles define which tools run and with what options. They support inheritance.
 
 | Profile | Description |
 |---------|-------------|
@@ -52,10 +51,12 @@ src/
 ├── orchestrator.py     # Parallel/sequential tool execution engine
 ├── registry.py         # Tool registration decorator
 ├── report.py           # Report save/load utilities
+├── target.py           # Target type detection
 ├── mcp/
 │   └── server.py       # MCP server (ohsint-mcp) — SSE transport
 └── tools/
     ├── base.py         # BaseTool ABC
+    ├── brave_search.py # Brave Search API
     ├── theharvester.py
     ├── spiderfoot.py
     ├── recon_ng.py
@@ -74,71 +75,151 @@ src/
 
 ## Setup
 
-### 1. Install on Kali/Parrot VM
+### Prerequisites
+
+- **Kali Linux** (bare metal, VM, or WSL2)
+- **Python 3.10+**
+- **Go** (for xray)
+- **Ruby** (for vcsmap)
+
+### 1. Install OhSINT
 
 ```bash
 # Clone the repo
 git clone https://github.com/GetSomeKelso/OhSINT.git ~/Tools/OhSINT
 cd ~/Tools/OhSINT
 
-# Create a virtual environment and activate it
+# Create a virtual environment (required on modern Debian/Kali)
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install the Python package (editable mode)
+# Install OhSINT
 pip install -e .
+```
 
-# Install OSINT tools
-# --- Available via pip ---
+> **Important:** Always activate the venv before running OhSINT:
+> ```bash
+> source ~/Tools/OhSINT/.venv/bin/activate
+> ```
+
+### 2. Install OSINT Tools
+
+#### Via apt (Kali has most of these)
+
+```bash
+sudo apt install -y libimage-exiftool-perl golang-go ruby ruby-dev theharvester recon-ng spiderfoot
+```
+
+#### Via pip (inside the venv)
+
+```bash
 pip install shodan
+```
 
-# --- Available via apt (Kali) ---
-sudo apt install libimage-exiftool-perl golang-go ruby ruby-dev theharvester recon-ng spiderfoot
+#### From source (git clone)
 
-# --- Install from source ---
+```bash
 mkdir -p ~/Tools/osint-deps && cd ~/Tools/osint-deps
-git clone https://github.com/opsdisk/metagoofil.git && pip install -r metagoofil/requirements.txt
-git clone https://github.com/techgaun/github-dorks.git && pip install -r github-dorks/requirements.txt
+
+# metagoofil — document metadata harvester
+git clone https://github.com/opsdisk/metagoofil.git
+pip install -r metagoofil/requirements.txt
+
+# github-dorks — GitHub secret scanner
+# NOTE: main script is github-dork.py (singular, not github-dorks.py)
+git clone https://github.com/techgaun/github-dorks.git
+pip install -r github-dorks/requirements.txt
+
+# dork-cli — Google dorking
+# NOTE: main script is dork-cli.py
 git clone https://github.com/jgor/dork-cli.git
-git clone https://github.com/k3170makan/GooDork.git && pip install beautifulsoup4
 
-# --- Go tools ---
+# GooDork — Google dorking (Python, despite the name)
+git clone https://github.com/k3170makan/GooDork.git
+pip install beautifulsoup4
+
+# datasploit — OSINT visualizer
+git clone https://github.com/upgoingstar/datasploit.git
+
+# snitch — dork-based info gathering
+git clone https://github.com/Smaash/snitch.git
+
+# creepy — geolocation OSINT
+# NOTE: CreepyMain.py is inside the nested creepy/creepy/ directory
+git clone https://github.com/ilektrojohn/creepy.git
+```
+
+#### Go tools
+
+```bash
+# xray — network recon (archived, go install doesn't work)
 git clone https://github.com/evilsocket/xray.git ~/Tools/osint-deps/xray
-cd ~/Tools/osint-deps/xray && go build -o xray ./cmd/xray/ && sudo cp xray /usr/local/bin/
-cd ~/Tools/osint-deps
+cd ~/Tools/osint-deps/xray && go build -o xray ./cmd/xray/
+sudo cp xray /usr/local/bin/
+```
 
-# --- Ruby tools ---
+#### Ruby tools
+
+```bash
 gem install vcsmap
+```
 
+> **Note:** If gem warns about PATH, add the gem bin directory:
+> ```bash
+> echo 'export PATH="$HOME/.local/share/gem/ruby/3.3.0/bin:$PATH"' >> ~/.zshrc
+> source ~/.zshrc
+> ```
+> Adjust the Ruby version (`3.3.0`) to match yours (`ruby --version`).
+
+### 3. Verify Installation
+
+```bash
 cd ~/Tools/OhSINT
-
-# Verify installation
+source .venv/bin/activate
 osint-orchestrator install-check
 ```
 
-> **Note:** Always activate the venv (`source .venv/bin/activate`) before running `osint-orchestrator` or `ohsint-mcp`.
+All 15 tools should show ✓.
 
-### 2. Configure API Keys
+### 4. Configure API Keys
 
 ```bash
 cp configs/api_keys.yaml.example configs/api_keys.yaml
+nano configs/api_keys.yaml
 ```
 
-Edit `configs/api_keys.yaml` with your keys:
+#### Priority keys (start with these)
 
-- **Shodan** — `api_key`
-- **theHarvester** — `github_token`, `hunter_api`, `intelx_api`, `securitytrails_api`
-- **SpiderFoot** — `virustotal`, `censys_id`, `censys_secret`, `fullcontact`, `hunter`, `ipinfo`
-- **recon-ng** — `builtwith_api`, `github_api`, `google_api`, `shodan_api`, `virustotal_api`, etc.
-- **github-dorks** — `github_token`
+| Key | Where to Get It | Tools Unlocked |
+|-----|----------------|----------------|
+| **Shodan** `api_key` | https://account.shodan.io | shodan, xray, recon_ng, datasploit |
+| **GitHub** `github_token` | https://github.com/settings/tokens | github_dorks, theharvester, recon_ng |
+| **Brave** `api_key` | https://brave.com/search/api/ | brave_search |
+
+GitHub token scopes needed: `public_repo`, `read:org`, `read:user` (read-only, no write permissions).
+
+#### Optional keys (add later for better coverage)
+
+| Key | Where to Get It |
+|-----|----------------|
+| Hunter `hunter_api` | https://hunter.io/api_key |
+| SecurityTrails `securitytrails_api` | https://securitytrails.com/app/account |
+| IntelX `intelx_api` | https://intelx.io/account?tab=developer |
+| VirusTotal `virustotal` | https://www.virustotal.com/gui/my-apikey |
+| Censys `censys_id` / `censys_secret` | https://search.censys.io/account/api |
+| IPinfo `ipinfo` | https://ipinfo.io/account/token |
+
+Check key status:
+
+```bash
+osint-orchestrator api-keys
+```
 
 API keys can also be set via environment variables: `OSINT_<TOOL>_<KEY>` (uppercased).
 
-### 3. Connect to Claude Desktop
+### 5. Connect to Claude Desktop (Optional)
 
 #### VM Port Forwarding
-
-In your hypervisor (VirtualBox, VMware, etc.), forward the guest port to the Windows host:
 
 **VirtualBox:** Settings → Network → Advanced → Port Forwarding
 
@@ -150,9 +231,8 @@ In your hypervisor (VirtualBox, VMware, etc.), forward the guest port to the Win
 
 #### Start the MCP Server
 
-On the Kali/Parrot VM:
-
 ```bash
+source ~/Tools/OhSINT/.venv/bin/activate
 ohsint-mcp
 ```
 
@@ -160,7 +240,7 @@ Listens on `127.0.0.1:8055` with SSE transport.
 
 #### Claude Desktop Config
 
-On Windows, edit your Claude Desktop config (`%APPDATA%\Claude\claude_desktop_config.json`):
+On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json`:
 
 ```json
 {
@@ -176,20 +256,18 @@ Restart Claude Desktop. The OhSINT tools will appear in the tool list.
 
 ## CLI Usage
 
-The CLI (`osint-orchestrator`) can be used directly on the VM for manual runs.
-
 ```bash
+# Dry run first — see what would execute
+osint-orchestrator full-recon -t example.com -p passive --authorization --dry-run
+
 # Full passive recon
 osint-orchestrator full-recon -t example.com -p passive --authorization
 
-# Active recon (requires explicit auth)
+# Active recon (direct interaction with target)
 osint-orchestrator full-recon -t example.com -p active --authorization
 
 # Single tool
 osint-orchestrator tool -t example.com theharvester --authorization
-
-# Dry run — show what would execute
-osint-orchestrator full-recon -t example.com -p full --authorization --dry-run
 
 # List tools and installation status
 osint-orchestrator list-tools
@@ -228,6 +306,7 @@ When connected via Claude Desktop, the following tools are available:
 | `osint_exiftool` | Extract metadata from files |
 | `osint_github_dorks` | Scan GitHub for sensitive info leaks |
 | `osint_google_dorks` | Run Google dork queries |
+| `osint_brave_search` | Web search via Brave Search API |
 | `osint_xray` | Network recon with XRay |
 | `osint_datasploit` | OSINT visualizer |
 | `osint_list_tools` | List tools and installation status |
