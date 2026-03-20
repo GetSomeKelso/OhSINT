@@ -5,6 +5,9 @@
 shodan:
   api_key: ""
 
+brave:
+  api_key: ""  # https://brave.com/search/api/ — free tier: 2,000 queries/month
+
 theharvester:
   github_token: ""
   hunter_api: ""
