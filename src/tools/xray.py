@@ -6,20 +6,46 @@ import json
 import re
 from typing import List
 
+from pathlib import Path
+
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
 from src.tools.base import BaseTool
 
+_XRAY_SEARCH_PATHS = [
+    Path.home() / "Tools" / "osint-deps" / "xray",
+    Path("/opt/tools/xray"),
+]
+
+
+def _find_xray_dir() -> Path | None:
+    for p in _XRAY_SEARCH_PATHS:
+        if p.exists() and (p / "cmd" / "xray").is_dir():
+            return p
+        # Also check for pre-built binary in the dir
+        if p.exists() and (p / "xray").exists():
+            return p
+    return None
+
 
 @register_tool
 class XRay(BaseTool):
     name = "xray"
-    description = "Network recon and OSINT from public networks"
+    description = "Network recon and OSINT from public networks (archived, legacy)"
     binary_name = "xray"
-    install_cmd = "go install github.com/evilsocket/xray/cmd/xray@latest"
+    install_cmd = "git clone https://github.com/evilsocket/xray.git ~/Tools/osint-deps/xray && cd ~/Tools/osint-deps/xray && go build -o xray ./cmd/xray/ && sudo cp xray /usr/local/bin/"
     accepted_target_types = (TargetType.DOMAIN, TargetType.IP, TargetType.CIDR)
     requires_api_keys = ("shodan.api_key",)
+
+    def is_installed(self) -> bool:
+        import shutil
+        if shutil.which(self.binary_name):
+            return True
+        src_dir = _find_xray_dir()
+        if src_dir and (src_dir / "xray").exists():
+            return True
+        return False
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         mode = kwargs.get("mode", "full")

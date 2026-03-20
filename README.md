@@ -103,7 +103,9 @@ git clone https://github.com/jgor/dork-cli.git
 git clone https://github.com/k3170makan/GooDork.git && pip install beautifulsoup4
 
 # --- Go tools ---
-go install github.com/evilsocket/xray/cmd/xray@latest
+git clone https://github.com/evilsocket/xray.git ~/Tools/osint-deps/xray
+cd ~/Tools/osint-deps/xray && go build -o xray ./cmd/xray/ && sudo cp xray /usr/local/bin/
+cd ~/Tools/osint-deps
 
 # --- Ruby tools ---
 gem install vcsmap
