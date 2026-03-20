@@ -221,6 +221,10 @@ API keys can also be set via environment variables: `OSINT_<TOOL>_<KEY>` (upperc
 
 #### VM Port Forwarding
 
+**Hyper-V:** Use the Default Switch (NAT) and find the VM's IP with `ip addr` on the guest. No port forwarding needed — the host can reach the VM IP directly. Use the VM's IP instead of `127.0.0.1` in the Claude Desktop config below.
+
+Alternatively, create an Internal or External virtual switch if you need a static IP.
+
 **VirtualBox:** Settings → Network → Advanced → Port Forwarding
 
 | Name | Protocol | Host IP | Host Port | Guest IP | Guest Port |
@@ -236,7 +240,12 @@ source ~/Tools/OhSINT/.venv/bin/activate
 ohsint-mcp
 ```
 
-Listens on `127.0.0.1:8055` with SSE transport.
+Listens on `127.0.0.1:8055` with SSE transport by default.
+
+> **Hyper-V users:** Bind to `0.0.0.0` so the host can reach the server:
+> ```bash
+> ohsint-mcp --host 0.0.0.0
+> ```
 
 #### Claude Desktop Config
 
@@ -250,6 +259,12 @@ On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json`:
     }
   }
 }
+```
+
+> **Hyper-V users:** Replace `127.0.0.1` with your VM's IP (run `ip addr` on the guest):
+> ```json
+> "url": "http://<VM-IP>:8055/sse"
+> ```
 ```
 
 Restart Claude Desktop. The OhSINT tools will appear in the tool list.
