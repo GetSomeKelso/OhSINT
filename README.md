@@ -221,9 +221,17 @@ API keys can also be set via environment variables: `OSINT_<TOOL>_<KEY>` (upperc
 
 #### VM Port Forwarding
 
-**Hyper-V:** Use the Default Switch (NAT) and find the VM's IP with `ip addr` on the guest. No port forwarding needed — the host can reach the VM IP directly. Use the VM's IP instead of `127.0.0.1` in the Claude Desktop config below.
+**Hyper-V (Default Switch):**
 
-Alternatively, create an Internal or External virtual switch if you need a static IP.
+No port forwarding needed. The host can reach the VM directly by IP.
+
+1. Find the VM's IP on Kali: `ip addr show eth0 | grep inet` (typically `172.x.x.x`)
+2. The server must bind to `0.0.0.0` (not `127.0.0.1`) so the host can reach it
+3. Use the VM's IP in the Claude Desktop config
+
+> **Warning:** Default Switch assigns a **dynamic IP** that changes on VM reboot.
+> You'll need to update the Claude Desktop config each time the IP changes.
+> For a stable IP, create an Internal virtual switch with a fixed subnet instead.
 
 **VirtualBox:** Settings → Network → Advanced → Port Forwarding
 
@@ -235,37 +243,44 @@ Alternatively, create an Internal or External virtual switch if you need a stati
 
 #### Start the MCP Server
 
+On the Kali VM:
+
 ```bash
 source ~/Tools/OhSINT/.venv/bin/activate
+
+# VirtualBox / VMware (localhost only, port forwarded to host)
 ohsint-mcp
+
+# Hyper-V (must bind to all interfaces)
+ohsint-mcp --host 0.0.0.0
 ```
 
-Listens on `127.0.0.1:8055` with SSE transport by default.
+Available flags:
 
-> **Hyper-V users:** Bind to `0.0.0.0` so the host can reach the server:
-> ```bash
-> ohsint-mcp --host 0.0.0.0
-> ```
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--host` | `127.0.0.1` | Bind address (`0.0.0.0` for Hyper-V) |
+| `--port` | `8055` | Listen port |
 
 #### Claude Desktop Config
 
-On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json`:
+On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json` and add `ohsint` to the `mcpServers` block:
 
+**VirtualBox / VMware** (port forwarded):
 ```json
-{
-  "mcpServers": {
-    "ohsint": {
-      "url": "http://127.0.0.1:8055/sse"
-    }
-  }
+"ohsint": {
+  "url": "http://127.0.0.1:8055/sse"
 }
 ```
 
-> **Hyper-V users:** Replace `127.0.0.1` with your VM's IP (run `ip addr` on the guest):
-> ```json
-> "url": "http://<VM-IP>:8055/sse"
-> ```
+**Hyper-V** (use VM's IP):
+```json
+"ohsint": {
+  "url": "http://<VM-IP>:8055/sse"
+}
 ```
+
+> **Note:** This uses the SSE `"url"` format, not the `"command"` / `"args"` format used by stdio-based MCP servers.
 
 Restart Claude Desktop. The OhSINT tools will appear in the tool list.
 
