@@ -339,17 +339,22 @@ Restart Claude Desktop. The OhSINT tools will appear in the tool list.
 
 #### Claude Code Config
 
-To use OhSINT tools from Claude Code, add a `.mcp.json` file in the project root:
+To use OhSINT tools from Claude Code, add a `.mcp.json` file in the project root.
+
+Claude Code requires `mcp-remote` to bridge SSE servers (needs Node.js/npx):
 
 ```json
 {
   "mcpServers": {
     "ohsint": {
-      "url": "http://<VM-IP>:8055/sse"
+      "command": "npx",
+      "args": ["mcp-remote", "http://<VM-IP>:8055/sse", "--allow-http"]
     }
   }
 }
 ```
+
+> **Note:** `--allow-http` is required for non-HTTPS connections. For static IP setups, replace `<VM-IP>` with `192.168.50.10`.
 
 Restart Claude Code for the tools to load.
 
