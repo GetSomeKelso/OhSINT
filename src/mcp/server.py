@@ -493,11 +493,12 @@ def main():
 
         # Wrap it to allow any Host header
         from starlette.applications import Starlette
+        from starlette.middleware import Middleware
         from starlette.routing import Mount
         wrapper = Starlette(
             routes=[Mount("/", app=app)],
             middleware=[
-                (TrustedHostMiddleware, {"allowed_hosts": ["*"]}),
+                Middleware(TrustedHostMiddleware, allowed_hosts=["*"]),
             ],
         )
 
