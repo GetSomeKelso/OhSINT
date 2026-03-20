@@ -481,7 +481,33 @@ def main():
     mcp.settings.port = args.port
 
     logger.info(f"Starting OhSINT MCP server on {args.host}:{args.port}")
-    mcp.run(transport="sse")
+
+    # MCP 1.26+ validates Host headers, blocking requests from IPs.
+    # When binding to 0.0.0.0 (e.g., Hyper-V), we need to allow all hosts.
+    # Patch the Starlette app after FastMCP creates it to remove the check.
+    if args.host == "0.0.0.0":
+        from starlette.applications import Starlette
+        from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+        _original_run = mcp.run
+
+        def _run_with_permissive_hosts(**kwargs):
+            # Get the ASGI app that FastMCP builds
+            app = mcp._mcp_server.sse_app()
+            # Remove TrustedHostMiddleware if present, or wrap with permissive one
+            import uvicorn
+
+            # Build a new app that allows all hosts
+            from starlette.middleware import Middleware
+            permissive_app = Starlette()
+            permissive_app.mount("/", app)
+            permissive_app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+
+            uvicorn.run(permissive_app, host=args.host, port=args.port)
+
+        _run_with_permissive_hosts()
+    else:
+        mcp.run(transport="sse")
 
 
 if __name__ == "__main__":
