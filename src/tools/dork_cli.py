@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import time
+from pathlib import Path
 from typing import List
 
 from src.models import IntelType, ToolResult
@@ -11,6 +12,18 @@ from src.registry import register_tool
 from src.target import TargetType
 from src.tools.base import BaseTool
 from src.config import DEFAULT_DORK_DELAY
+
+_DORK_CLI_SEARCH_PATHS = [
+    Path.home() / "Tools" / "osint-deps" / "dork-cli",
+    Path("/opt/tools/dork-cli"),
+]
+
+
+def _find_dork_cli_dir() -> Path | None:
+    for p in _DORK_CLI_SEARCH_PATHS:
+        if p.exists() and (p / "dork").exists():
+            return p
+    return None
 
 # Built-in dork categories from GHDB and Google-Dorks repos
 DORK_CATEGORIES = {
@@ -79,9 +92,15 @@ class DorkCli(BaseTool):
     name = "dork_cli"
     description = "Google dork queries with built-in dork library and rate limiting"
     binary_name = "dork"
-    install_cmd = "pip install dork-cli"
+    install_cmd = "git clone https://github.com/jgor/dork-cli.git ~/Tools/osint-deps/dork-cli"
     accepted_target_types = (TargetType.DOMAIN,)
     requires_api_keys = ()
+
+    def is_installed(self) -> bool:
+        import shutil
+        if shutil.which(self.binary_name):
+            return True
+        return _find_dork_cli_dir() is not None
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         query = kwargs.get("query", f"site:{target}")

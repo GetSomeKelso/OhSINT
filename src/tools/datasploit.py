@@ -12,8 +12,18 @@ from src.registry import register_tool
 from src.target import TargetType
 from src.tools.base import BaseTool
 
-# DataSploit is cloned to /opt/tools/datasploit in Docker
-DATASPLOIT_DIR = Path("/opt/tools/datasploit")
+# Search paths for DataSploit source
+_DATASPLOIT_SEARCH_PATHS = [
+    Path.home() / "Tools" / "osint-deps" / "datasploit",
+    Path("/opt/tools/datasploit"),
+]
+
+
+def _find_datasploit_dir() -> Path | None:
+    for p in _DATASPLOIT_SEARCH_PATHS:
+        if p.exists() and (p / "datasploit.py").exists():
+            return p
+    return None
 
 
 @register_tool
@@ -21,13 +31,13 @@ class DataSploit(BaseTool):
     name = "datasploit"
     description = "OSINT visualizer — aggregates Shodan, Censys, Clearbit"
     binary_name = "python3"
-    install_cmd = "git clone https://github.com/upgoingstar/datasploit.git /opt/tools/datasploit"
+    install_cmd = "git clone https://github.com/upgoingstar/datasploit.git ~/Tools/osint-deps/datasploit"
     accepted_target_types = (TargetType.DOMAIN, TargetType.IP, TargetType.EMAIL, TargetType.PERSON_NAME)
     requires_api_keys = ("shodan.api_key",)
 
     def is_installed(self) -> bool:
         """Check if the datasploit directory exists."""
-        return DATASPLOIT_DIR.exists() and (DATASPLOIT_DIR / "datasploit.py").exists()
+        return _find_datasploit_dir() is not None
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         target_type = kwargs.get("target_type", "domain")

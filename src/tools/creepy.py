@@ -12,7 +12,17 @@ from src.registry import register_tool
 from src.target import TargetType
 from src.tools.base import BaseTool
 
-CREEPY_DIR = Path("/opt/tools/creepy")
+_CREEPY_SEARCH_PATHS = [
+    Path.home() / "Tools" / "osint-deps" / "creepy",
+    Path("/opt/tools/creepy"),
+]
+
+
+def _find_creepy_dir() -> Path | None:
+    for p in _CREEPY_SEARCH_PATHS:
+        if p.exists() and (p / "CreepyMain.py").exists():
+            return p
+    return None
 
 
 @register_tool
@@ -20,15 +30,16 @@ class Creepy(BaseTool):
     name = "creepy"
     description = "Geolocation OSINT from social media profiles"
     binary_name = "python3"
-    install_cmd = "git clone https://github.com/ilektrojohn/creepy.git /opt/tools/creepy"
+    install_cmd = "git clone https://github.com/ilektrojohn/creepy.git ~/Tools/osint-deps/creepy"
     accepted_target_types = (TargetType.PERSON_NAME, TargetType.USERNAME)
     requires_api_keys = ()
 
     def is_installed(self) -> bool:
-        return CREEPY_DIR.exists() and (CREEPY_DIR / "CreepyMain.py").exists()
+        return _find_creepy_dir() is not None
 
     def build_command(self, target: str, **kwargs) -> List[str]:
-        script = str(CREEPY_DIR / "CreepyMain.py")
+        src_dir = _find_creepy_dir()
+        script = str(src_dir / "CreepyMain.py") if src_dir else "CreepyMain.py"
         mode = kwargs.get("mode", "social")
         cmd = ["python3", script, "-t", target]
         if mode == "social":

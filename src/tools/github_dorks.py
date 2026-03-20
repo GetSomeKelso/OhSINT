@@ -3,12 +3,26 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import List
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
 from src.tools.base import BaseTool
+
+_GITHUB_DORKS_SEARCH_PATHS = [
+    Path.home() / "Tools" / "osint-deps" / "github-dorks",
+    Path("/opt/tools/github-dorks"),
+]
+
+
+def _find_github_dorks_dir() -> Path | None:
+    """Return the first github-dorks source directory that exists."""
+    for p in _GITHUB_DORKS_SEARCH_PATHS:
+        if p.exists() and (p / "github-dorks.py").exists():
+            return p
+    return None
 
 # Built-in dork patterns for GitHub searching
 BUILTIN_DORKS = [
@@ -48,15 +62,32 @@ class GithubDorks(BaseTool):
     name = "github_dorks"
     description = "Scan GitHub repos/orgs for sensitive information leaks"
     binary_name = "github-dorks"
-    install_cmd = "pip install github-dorks"
+    install_cmd = "git clone https://github.com/techgaun/github-dorks.git ~/Tools/osint-deps/github-dorks && pip install -r ~/Tools/osint-deps/github-dorks/requirements.txt"
     accepted_target_types = (TargetType.GITHUB_HANDLE,)
     requires_api_keys = ("github_dorks.github_token",)
+
+    def is_installed(self) -> bool:
+        """Check PATH first, then known source directories."""
+        import shutil
+        if shutil.which(self.binary_name):
+            return True
+        return _find_github_dorks_dir() is not None
+
+    def _get_executable(self) -> List[str]:
+        """Return the command prefix for github-dorks."""
+        import shutil
+        if shutil.which(self.binary_name):
+            return [self.binary_name]
+        src_dir = _find_github_dorks_dir()
+        if src_dir:
+            return ["python3", str(src_dir / "github-dorks.py")]
+        return [self.binary_name]
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         dork_file = kwargs.get("dork_file")
         mode = kwargs.get("mode", "org_scan")
 
-        cmd = ["github-dorks"]
+        cmd = [*self._get_executable()]
 
         # Target can be org or user
         if mode == "org_scan":

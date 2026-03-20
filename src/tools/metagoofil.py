@@ -13,15 +13,46 @@ from src.registry import register_tool
 from src.target import TargetType
 from src.tools.base import BaseTool
 
+# Possible locations for metagoofil installed from source
+_METAGOOFIL_SEARCH_PATHS = [
+    Path.home() / "Tools" / "osint-deps" / "metagoofil",
+    Path("/opt/tools/metagoofil"),
+]
+
+
+def _find_metagoofil_dir() -> Path | None:
+    """Return the first metagoofil source directory that exists."""
+    for p in _METAGOOFIL_SEARCH_PATHS:
+        if p.exists() and (p / "metagoofil.py").exists():
+            return p
+    return None
+
 
 @register_tool
 class Metagoofil(BaseTool):
     name = "metagoofil"
     description = "Harvest document metadata from a domain (PDF/DOC/XLS)"
     binary_name = "metagoofil"
-    install_cmd = "pip install metagoofil"
+    install_cmd = "git clone https://github.com/opsdisk/metagoofil.git ~/Tools/osint-deps/metagoofil && pip install -r ~/Tools/osint-deps/metagoofil/requirements.txt"
     accepted_target_types = (TargetType.DOMAIN,)
     requires_api_keys = ()
+
+    def is_installed(self) -> bool:
+        """Check PATH first, then known source directories."""
+        import shutil
+        if shutil.which(self.binary_name):
+            return True
+        return _find_metagoofil_dir() is not None
+
+    def _get_executable(self) -> List[str]:
+        """Return the command prefix for metagoofil."""
+        import shutil
+        if shutil.which(self.binary_name):
+            return [self.binary_name]
+        src_dir = _find_metagoofil_dir()
+        if src_dir:
+            return ["python3", str(src_dir / "metagoofil.py")]
+        return [self.binary_name]  # will fail with a clear error
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         filetypes = kwargs.get("filetypes", "pdf,doc,xls,ppt,docx,xlsx,pptx")
@@ -34,7 +65,7 @@ class Metagoofil(BaseTool):
         self._last_output_dir = output_dir
 
         return [
-            self.binary_name,
+            *self._get_executable(),
             "-d", target,
             "-t", filetypes,
             "-l", str(max_results),

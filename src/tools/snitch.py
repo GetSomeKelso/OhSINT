@@ -13,7 +13,17 @@ from src.target import TargetType
 from src.tools.base import BaseTool
 from src.config import DEFAULT_DORK_DELAY
 
-SNITCH_DIR = Path("/opt/tools/snitch")
+_SNITCH_SEARCH_PATHS = [
+    Path.home() / "Tools" / "osint-deps" / "snitch",
+    Path("/opt/tools/snitch"),
+]
+
+
+def _find_snitch_dir() -> Path | None:
+    for p in _SNITCH_SEARCH_PATHS:
+        if p.exists() and (p / "snitch.py").exists():
+            return p
+    return None
 
 
 @register_tool
@@ -21,15 +31,16 @@ class Snitch(BaseTool):
     name = "snitch"
     description = "Information gathering via dorks"
     binary_name = "python3"
-    install_cmd = "git clone https://github.com/Smaash/snitch.git /opt/tools/snitch"
+    install_cmd = "git clone https://github.com/Smaash/snitch.git ~/Tools/osint-deps/snitch"
     accepted_target_types = (TargetType.DOMAIN,)
     requires_api_keys = ()
 
     def is_installed(self) -> bool:
-        return SNITCH_DIR.exists() and (SNITCH_DIR / "snitch.py").exists()
+        return _find_snitch_dir() is not None
 
     def build_command(self, target: str, **kwargs) -> List[str]:
-        script = str(SNITCH_DIR / "snitch.py")
+        src_dir = _find_snitch_dir()
+        script = str(src_dir / "snitch.py") if src_dir else "snitch.py"
         return ["python3", script, "-t", target]
 
     def parse_output(self, raw_output: str, target: str) -> ToolResult:
