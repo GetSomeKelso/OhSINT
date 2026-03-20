@@ -231,6 +231,29 @@ async def osint_google_dorks(
 
 
 @mcp.tool()
+async def osint_brave_search(
+    target: str,
+    queries: str = "all",
+    count: int = 20,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Search the web via Brave Search API for OSINT reconnaissance.
+
+    Runs OSINT-focused dork queries (subdomains, documents, login pages,
+    exposed files, directory listings, config exposure, error pages, API endpoints).
+
+    queries: all, subdomains, documents, login_pages, exposed_files,
+             directory_listings, config_exposure, error_pages, api_endpoints.
+    """
+    _require_auth(authorization_confirmed)
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool_resolved,
+        "brave_search", target, queries=queries, count=count,
+    )
+    return _format_result(result)
+
+
+@mcp.tool()
 async def osint_xray(
     target: str,
     mode: str = "full",

@@ -18,6 +18,8 @@ passive:
         use_case: "passive"
     - dork_cli:
         dorks: "ghdb_passive"
+    - brave_search:
+        queries: "all"
 
 active:
   description: "Active recon — direct interaction with target (requires explicit auth)"
@@ -40,6 +42,8 @@ metadata:
         mode: "post_metagoofil"
     - dork_cli:
         dorks: "filetype_dorks"
+    - brave_search:
+        queries: "documents"
 
 social:
   description: "People and social media focused recon"

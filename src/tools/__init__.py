@@ -9,6 +9,9 @@ from src.tools.shodan_tool import ShodanTool
 from src.tools.exiftool import ExifTool
 from src.tools.github_dorks import GithubDorks
 
+# API-based tools
+from src.tools.brave_search import BraveSearch
+
 # Tier 2 — CLI-Compatible, May Need Wrapper Logic
 from src.tools.xray import XRay
 from src.tools.goodork import GooDork
@@ -27,6 +30,8 @@ __all__ = [
     "ShodanTool",
     "ExifTool",
     "GithubDorks",
+    # API-based
+    "BraveSearch",
     # Tier 2
     "XRay",
     "GooDork",
