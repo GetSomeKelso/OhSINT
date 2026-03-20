@@ -88,12 +88,27 @@ source .venv/bin/activate
 # Install the Python package (editable mode)
 pip install -e .
 
-# Install OSINT tools (most are pre-installed on Kali)
-sudo apt install libimage-exiftool-perl golang-go ruby ruby-dev
-pip install theHarvester shodan dork-cli recon-ng spiderfoot metagoofil github-dorks
+# Install OSINT tools
+# --- Available via pip ---
+pip install shodan
+
+# --- Available via apt (Kali) ---
+sudo apt install libimage-exiftool-perl golang-go ruby ruby-dev theharvester recon-ng spiderfoot
+
+# --- Install from source ---
+mkdir -p ~/Tools/osint-deps && cd ~/Tools/osint-deps
+git clone https://github.com/opsdisk/metagoofil.git && pip install -r metagoofil/requirements.txt
+git clone https://github.com/techgaun/github-dorks.git && pip install -r github-dorks/requirements.txt
+git clone https://github.com/jgor/dork-cli.git
+
+# --- Go tools ---
 go install github.com/evilsocket/xray@latest
 go install github.com/k3170makan/GooDork@latest
+
+# --- Ruby tools ---
 gem install vcsmap
+
+cd ~/Tools/OhSINT
 
 # Verify installation
 osint-orchestrator install-check
