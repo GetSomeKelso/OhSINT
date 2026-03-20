@@ -453,18 +453,35 @@ def _format_result(result: Any) -> str:
 
 
 def main():
-    """Run the MCP server over SSE on 127.0.0.1:8055.
+    """Run the MCP server over SSE.
 
     Designed to run inside a Kali/Parrot VM with port forwarding
     to the Windows host where Claude Desktop connects.
+
+    Usage:
+        ohsint-mcp                    # binds to 127.0.0.1:8055
+        ohsint-mcp --host 0.0.0.0     # binds to all interfaces (Hyper-V)
+        ohsint-mcp --port 9000        # custom port
     """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="OhSINT MCP Server")
+    parser.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1, use 0.0.0.0 for Hyper-V)")
+    parser.add_argument("--port", type=int, default=8055, help="Port (default: 8055)")
+    args = parser.parse_args()
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
         datefmt="%H:%M:%S",
     )
-    logger.info("Starting OhSINT MCP server on 127.0.0.1:8055")
-    mcp.run(transport="sse", host="127.0.0.1", port=8055)
+
+    # FastMCP takes host/port in constructor, not run()
+    mcp.settings.host = args.host
+    mcp.settings.port = args.port
+
+    logger.info(f"Starting OhSINT MCP server on {args.host}:{args.port}")
+    mcp.run(transport="sse")
 
 
 if __name__ == "__main__":
