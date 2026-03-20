@@ -17,7 +17,7 @@ class XRay(BaseTool):
     name = "xray"
     description = "Network recon and OSINT from public networks"
     binary_name = "xray"
-    install_cmd = "go install github.com/evilsocket/xray@latest"
+    install_cmd = "go install github.com/evilsocket/xray/cmd/xray@latest"
     accepted_target_types = (TargetType.DOMAIN, TargetType.IP, TargetType.CIDR)
     requires_api_keys = ("shodan.api_key",)
 

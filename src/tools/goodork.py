@@ -1,9 +1,10 @@
-"""GooDork — Google dorking from CLI (Go binary)."""
+"""GooDork — Google dorking from CLI (Python script)."""
 
 from __future__ import annotations
 
 import re
 import time
+from pathlib import Path
 from typing import List
 
 from src.models import IntelType, ToolResult
@@ -12,20 +13,47 @@ from src.target import TargetType
 from src.tools.base import BaseTool
 from src.config import DEFAULT_DORK_DELAY
 
+_GOODORK_SEARCH_PATHS = [
+    Path.home() / "Tools" / "osint-deps" / "GooDork",
+    Path("/opt/tools/GooDork"),
+]
+
+
+def _find_goodork_dir() -> Path | None:
+    for p in _GOODORK_SEARCH_PATHS:
+        if p.exists() and (p / "GooDork.py").exists():
+            return p
+    return None
+
 
 @register_tool
 class GooDork(BaseTool):
     name = "goodork"
     description = "Google dorking from the command line"
     binary_name = "GooDork"
-    install_cmd = "go install github.com/k3170makan/GooDork@latest"
+    install_cmd = "git clone https://github.com/k3170makan/GooDork.git ~/Tools/osint-deps/GooDork && pip install beautifulsoup4"
     accepted_target_types = (TargetType.DOMAIN,)
     requires_api_keys = ()
+
+    def is_installed(self) -> bool:
+        import shutil
+        if shutil.which(self.binary_name):
+            return True
+        return _find_goodork_dir() is not None
+
+    def _get_executable(self) -> List[str]:
+        import shutil
+        if shutil.which(self.binary_name):
+            return [self.binary_name]
+        src_dir = _find_goodork_dir()
+        if src_dir:
+            return ["python3", str(src_dir / "GooDork.py")]
+        return [self.binary_name]
 
     def build_command(self, target: str, **kwargs) -> List[str]:
         query = kwargs.get("query", f"site:{target}")
         pages = kwargs.get("pages", 3)
-        return ["GooDork", "-q", query, "-p", str(pages)]
+        return [*self._get_executable(), "-q", query, "-p", str(pages)]
 
     def run(self, target: str, timeout: int = 300, **kwargs) -> ToolResult:
         """Override to support multiple dork queries with rate limiting."""

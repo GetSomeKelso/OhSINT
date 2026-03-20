@@ -20,8 +20,8 @@ Unified OSINT reconnaissance orchestrator that wraps 14 open-source intelligence
 
 | Tool | Binary | Description |
 |------|--------|-------------|
-| XRay | `xray` | Network reconnaissance (Go) |
-| GooDork | `GooDork` | Google dorking (Go) |
+| XRay | `xray` | Network reconnaissance (Go, archived) |
+| GooDork | `GooDork.py` | Google dorking (Python) |
 | dork-cli | `dork-cli` | Google dork query runner |
 | DataSploit | `datasploit` | OSINT visualizer |
 | Snitch | `snitch` | Information gathering via dorks |
@@ -100,10 +100,10 @@ mkdir -p ~/Tools/osint-deps && cd ~/Tools/osint-deps
 git clone https://github.com/opsdisk/metagoofil.git && pip install -r metagoofil/requirements.txt
 git clone https://github.com/techgaun/github-dorks.git && pip install -r github-dorks/requirements.txt
 git clone https://github.com/jgor/dork-cli.git
+git clone https://github.com/k3170makan/GooDork.git && pip install beautifulsoup4
 
 # --- Go tools ---
-go install github.com/evilsocket/xray@latest
-go install github.com/k3170makan/GooDork@latest
+go install github.com/evilsocket/xray/cmd/xray@latest
 
 # --- Ruby tools ---
 gem install vcsmap
