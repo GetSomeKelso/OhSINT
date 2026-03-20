@@ -21,7 +21,7 @@ _DORK_CLI_SEARCH_PATHS = [
 
 def _find_dork_cli_dir() -> Path | None:
     for p in _DORK_CLI_SEARCH_PATHS:
-        if p.exists() and (p / "dork").exists():
+        if p.exists() and (p / "dork-cli.py").exists():
             return p
     return None
 
@@ -102,10 +102,19 @@ class DorkCli(BaseTool):
             return True
         return _find_dork_cli_dir() is not None
 
+    def _get_executable(self) -> List[str]:
+        import shutil
+        if shutil.which(self.binary_name):
+            return [self.binary_name]
+        src_dir = _find_dork_cli_dir()
+        if src_dir:
+            return ["python3", str(src_dir / "dork-cli.py")]
+        return [self.binary_name]
+
     def build_command(self, target: str, **kwargs) -> List[str]:
         query = kwargs.get("query", f"site:{target}")
         pages = kwargs.get("pages", 2)
-        return ["dork", "-q", query, "-p", str(pages)]
+        return [*self._get_executable(), "-q", query, "-p", str(pages)]
 
     def run(self, target: str, timeout: int = 300, **kwargs) -> ToolResult:
         """Run dork queries from a category or custom list with rate limiting."""
