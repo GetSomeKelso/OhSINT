@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "ohsint": {
+      "url": "http://172.23.79.255:8055/sse"
+    }
+  }
+}

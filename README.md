@@ -231,7 +231,53 @@ No port forwarding needed. The host can reach the VM directly by IP.
 
 > **Warning:** Default Switch assigns a **dynamic IP** that changes on VM reboot.
 > You'll need to update the Claude Desktop config each time the IP changes.
-> For a stable IP, create an Internal virtual switch with a fixed subnet instead.
+> For a stable IP, create an Internal virtual switch with a fixed subnet (see below).
+
+**Hyper-V (Static IP with Internal Switch — recommended):**
+
+Create a dedicated virtual switch with a fixed subnet so the VM IP never changes:
+
+On Windows (PowerShell as Admin):
+```powershell
+# Create an internal switch
+New-VMSwitch -Name "OhSINT" -SwitchType Internal
+
+# Find the new adapter's interface index
+Get-NetAdapter | Where-Object { $_.Name -match "OhSINT" }
+
+# Assign a static IP to the Windows side (use ifIndex from above)
+New-NetIPAddress -IPAddress 192.168.50.1 -PrefixLength 24 -InterfaceIndex <ifIndex>
+
+# Enable NAT so the VM can still reach the internet
+New-NetNat -Name "OhSINTNAT" -InternalIPInterfaceAddressPrefix 192.168.50.0/24
+```
+
+Then in Hyper-V Manager, add the "OhSINT" switch as a network adapter on your Kali VM.
+
+On the Kali VM, configure the new adapter with a static IP:
+```bash
+# Find the new interface name (e.g., eth1)
+ip link show
+
+# Edit network config
+sudo nano /etc/network/interfaces
+```
+
+Add:
+```
+auto eth1
+iface eth1 inet static
+    address 192.168.50.10
+    netmask 255.255.255.0
+    gateway 192.168.50.1
+    dns-nameservers 8.8.8.8
+```
+
+```bash
+sudo systemctl restart networking
+```
+
+Your permanent MCP URL becomes `http://192.168.50.10:8055/sse` — no more IP changes.
 
 **VirtualBox:** Settings → Network → Advanced → Port Forwarding
 
@@ -273,16 +319,39 @@ On Windows, edit `%APPDATA%\Claude\claude_desktop_config.json` and add `ohsint` 
 }
 ```
 
-**Hyper-V** (use VM's IP):
+**Hyper-V Default Switch** (use VM's IP):
 ```json
 "ohsint": {
   "url": "http://<VM-IP>:8055/sse"
 }
 ```
 
+**Hyper-V Internal Switch** (static IP):
+```json
+"ohsint": {
+  "url": "http://192.168.50.10:8055/sse"
+}
+```
+
 > **Note:** This uses the SSE `"url"` format, not the `"command"` / `"args"` format used by stdio-based MCP servers.
 
 Restart Claude Desktop. The OhSINT tools will appear in the tool list.
+
+#### Claude Code Config
+
+To use OhSINT tools from Claude Code, add a `.mcp.json` file in the project root:
+
+```json
+{
+  "mcpServers": {
+    "ohsint": {
+      "url": "http://<VM-IP>:8055/sse"
+    }
+  }
+}
+```
+
+Restart Claude Code for the tools to load.
 
 ## CLI Usage
 
