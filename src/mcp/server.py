@@ -482,28 +482,24 @@ def main():
 
     logger.info(f"Starting OhSINT MCP server on {args.host}:{args.port}")
 
-    # MCP 1.26+ validates Host headers, blocking requests from IPs.
-    # When binding to 0.0.0.0 (e.g., Hyper-V), rewrite the Host header
-    # to localhost before it reaches the MCP SSE app's validation.
+    # MCP 1.26+ validates Host headers via transport_security.py,
+    # rejecting requests with IP-based Host headers (e.g., from Hyper-V).
+    # Disable this validation when binding to 0.0.0.0.
     if args.host == "0.0.0.0":
-        import uvicorn
+        try:
+            import mcp.server.transport_security as ts
+            # Patch the validation to accept all hosts
+            if hasattr(ts, "validate_request"):
+                ts._original_validate_request = ts.validate_request
+                ts.validate_request = lambda *a, **kw: None
+            # Also try patching the class-based approach
+            if hasattr(ts, "TransportSecurity"):
+                orig_check = ts.TransportSecurity.check_request
+                ts.TransportSecurity.check_request = lambda self, *a, **kw: None
+        except (ImportError, AttributeError) as e:
+            logger.warning(f"Could not disable host validation: {e}")
 
-        app = mcp.sse_app()
-
-        async def host_rewrite_wrapper(scope, receive, send):
-            if scope["type"] == "http":
-                # Rewrite Host header to localhost so MCP's validation passes
-                headers = []
-                for name, value in scope.get("headers", []):
-                    if name == b"host":
-                        value = f"localhost:{args.port}".encode()
-                    headers.append((name, value))
-                scope = dict(scope, headers=headers)
-            await app(scope, receive, send)
-
-        uvicorn.run(host_rewrite_wrapper, host=args.host, port=args.port)
-    else:
-        mcp.run(transport="sse")
+    mcp.run(transport="sse")
 
 
 if __name__ == "__main__":
