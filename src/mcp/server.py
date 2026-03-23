@@ -404,6 +404,145 @@ async def osint_install_check() -> str:
 
 
 # ---------------------------------------------------------------------------
+# LinkedIn / People Recon tools
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_crosslinked(
+    company_name: str,
+    domain: str = "",
+    email_format: str = "",
+    authorization_confirmed: bool = False,
+) -> str:
+    """LinkedIn employee enumeration via search engine scraping (passive).
+
+    Scrapes Google/Bing for LinkedIn profiles matching the company name.
+    Generates formatted emails based on discovered names.
+    No LinkedIn account needed — fully passive.
+    """
+    _require_auth(authorization_confirmed)
+    kwargs: dict[str, Any] = {}
+    if domain:
+        kwargs["domain"] = domain
+    if email_format:
+        kwargs["email_format"] = email_format
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool_resolved,
+        "crosslinked", company_name, **kwargs,
+    )
+    return _format_result(result)
+
+
+@mcp.tool()
+async def osint_inspy(
+    company_name: str,
+    mode: str = "both",
+    domain: str = "",
+    email_format: str = "",
+    authorization_confirmed: bool = False,
+) -> str:
+    """LinkedIn employee and tech stack enumeration via InSpy.
+
+    mode options:
+    - empspy: Employee enumeration by title/department
+    - techspy: Technology stack fingerprinting from job listings
+    - both: Run EmpSpy + TechSpy together
+    """
+    _require_auth(authorization_confirmed)
+    kwargs: dict[str, Any] = {"mode": mode}
+    if domain:
+        kwargs["domain"] = domain
+    if email_format:
+        kwargs["email_format"] = email_format
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool_resolved,
+        "inspy", company_name, **kwargs,
+    )
+    return _format_result(result)
+
+
+@mcp.tool()
+async def osint_linkedin2username(
+    company: str,
+    domain: str = "",
+    depth: int = 5,
+    sleep: int = 3,
+    keywords: str = "",
+    authorization_confirmed: bool = False,
+) -> str:
+    """Authenticated LinkedIn employee scraping via Selenium.
+
+    Generates multiple username format files (jsmith, john.smith, etc.).
+    Requires LinkedIn credentials in api_keys.yaml.
+    WARNING: LinkedIn may rate-limit or ban accounts that scrape aggressively.
+    """
+    _require_auth(authorization_confirmed)
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool_resolved,
+        "linkedin2username", company,
+        domain=domain, depth=depth, sleep=sleep, keywords=keywords,
+    )
+    return _format_result(result)
+
+
+@mcp.tool()
+async def osint_sherlock(
+    usernames: str,
+    nsfw: bool = False,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Search for usernames across 400+ social media sites.
+
+    usernames: Comma-separated list of usernames to search.
+    Batch mode — all usernames checked in a single invocation.
+    """
+    _require_auth(authorization_confirmed)
+    username_list = [u.strip() for u in usernames.split(",") if u.strip()]
+    result = await asyncio.to_thread(
+        _get_orchestrator().run_tool_resolved,
+        "sherlock", usernames,
+        usernames=username_list, nsfw=nsfw,
+    )
+    return _format_result(result)
+
+
+@mcp.tool()
+async def osint_people_recon(
+    company_name: str,
+    domain: str = "",
+    profile: str = "passive",
+    authorization_confirmed: bool = False,
+) -> str:
+    """Run the full people reconnaissance pipeline.
+
+    Pipeline order:
+    1. CrossLinked + InSpy (passive, parallel)
+    2. linkedin2username (active only, if credentials configured)
+    3. Deduplicate person names across tools
+    4. Generate username variations
+    5. Sherlock batch search on all discovered usernames
+    6. theHarvester validates discovered emails
+
+    profile options: passive (1,3-5), active (1-6), full (all tools).
+    """
+    _require_auth(authorization_confirmed)
+    # Map people-recon profiles to scan profiles
+    profile_map = {"passive": "people", "active": "people", "full": "people"}
+    scan_profile = profile_map.get(profile, "people")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_target = company_name.replace("/", "_").replace(":", "_").replace(" ", "_")
+    output_dir = DEFAULT_RESULTS_DIR / safe_target / timestamp
+
+    orchestrator = Orchestrator(config=_get_config(), timeout=600, verbose=True)
+    report = await asyncio.to_thread(
+        orchestrator.run_profile, company_name, scan_profile, output_dir,
+    )
+
+    save_report(report, output_dir, "all")
+    return report.to_markdown()
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 def _format_result(result: Any) -> str:

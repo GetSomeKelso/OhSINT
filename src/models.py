@@ -30,6 +30,7 @@ class IntelType(str, Enum):
     PORT_SERVICE = "port_service"
     ASN = "asn"
     SENSITIVE_FILE = "sensitive_file"
+    USERNAME = "username"
 
 
 class ToolResult(BaseModel):

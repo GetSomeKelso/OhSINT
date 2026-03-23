@@ -34,3 +34,13 @@ recon_ng:
 
 github_dorks:
   github_token: ""
+
+linkedin:
+  # Required for linkedin2username (active recon only)
+  # Use a dedicated research account, NOT your personal LinkedIn
+  email: ""
+  password: ""
+
+hunter_io:
+  # Optional — improves InSpy email verification
+  api_key: ""

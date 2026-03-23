@@ -1,6 +1,6 @@
 # OhSINT
 
-Unified OSINT reconnaissance orchestrator that wraps 15 open-source intelligence tools behind a single CLI and MCP server. Designed to run on Kali Linux and connect to Claude Desktop on a Windows host via SSE.
+Unified OSINT reconnaissance orchestrator that wraps 20 open-source intelligence tools behind a single CLI and MCP server. Designed to run on Kali Linux and connect to Claude Desktop on a Windows host via SSE.
 
 ## Tools
 
@@ -15,6 +15,16 @@ Unified OSINT reconnaissance orchestrator that wraps 15 open-source intelligence
 | Shodan | Internet-connected device search | `pip` |
 | ExifTool | File metadata extraction | `apt` |
 | github-dorks | GitHub sensitive information scanner | git clone |
+
+### LinkedIn / People Recon
+
+| Tool | Description | Install Method |
+|------|-------------|----------------|
+| CrossLinked | LinkedIn employee enum via search engine scraping (passive) | `pip` |
+| InSpy | Employee enumeration + tech stack from job listings | git clone |
+| linkedin2username | Authenticated LinkedIn scraping via Selenium | git clone |
+| Sherlock | Username search across 400+ social media sites | `pip` |
+| LinkedInt | LinkedIn profile deep-scraping (archived, Tier 2) | git clone |
 
 ### Tier 2 — CLI-Compatible
 
@@ -37,6 +47,7 @@ Unified OSINT reconnaissance orchestrator that wraps 15 open-source intelligence
 | `active` | Direct interaction with target (inherits passive) |
 | `metadata` | Document and metadata focused |
 | `social` | People and social media focused |
+| `people` | LinkedIn enumeration, username discovery, social profile mapping |
 | `full` | All tools, all modules (inherits active) |
 
 Profiles are defined in `configs/scan_profiles.yaml`.
@@ -64,6 +75,11 @@ src/
     ├── shodan_tool.py
     ├── exiftool.py
     ├── github_dorks.py
+    ├── crosslinked.py  # LinkedIn employee enum (passive)
+    ├── inspy.py        # EmpSpy + TechSpy
+    ├── linkedin2username.py  # Authenticated LinkedIn scraping
+    ├── sherlock_tool.py      # Username search (400+ sites)
+    ├── linkedint.py    # LinkedIn deep-scraping (archived)
     ├── xray.py
     ├── goodork.py
     ├── dork_cli.py
@@ -113,7 +129,7 @@ sudo apt install -y libimage-exiftool-perl golang-go ruby ruby-dev theharvester 
 #### Via pip (inside the venv)
 
 ```bash
-pip install shodan
+pip install shodan crosslinked sherlock-project
 ```
 
 #### From source (git clone)
@@ -147,7 +163,23 @@ git clone https://github.com/Smaash/snitch.git
 # creepy — geolocation OSINT
 # NOTE: CreepyMain.py is inside the nested creepy/creepy/ directory
 git clone https://github.com/ilektrojohn/creepy.git
+
+# InSpy — LinkedIn employee + tech stack enumeration
+git clone https://github.com/jobroche/InSpy.git
+pip install -r InSpy/requirements.txt
+
+# linkedin2username — authenticated LinkedIn scraping
+git clone https://github.com/initstring/linkedin2username.git
+pip install -r linkedin2username/requirements.txt
+
+# LinkedInt — LinkedIn deep-scraping (archived, may not work)
+git clone https://github.com/mdsecactivebreach/LinkedInt.git
 ```
+
+> **Note:** linkedin2username requires a browser for Selenium:
+> ```bash
+> sudo apt install -y chromium chromium-driver
+> ```
 
 #### Go tools
 
@@ -179,7 +211,7 @@ source .venv/bin/activate
 osint-orchestrator install-check
 ```
 
-All 15 tools should show ✓.
+All 20 tools should show ✓ (LinkedInt may show as non-functional — this is expected).
 
 ### 4. Configure API Keys
 
@@ -411,6 +443,11 @@ When connected via Claude Desktop, the following tools are available:
 | `osint_github_dorks` | Scan GitHub for sensitive info leaks |
 | `osint_google_dorks` | Run Google dork queries |
 | `osint_brave_search` | Web search via Brave Search API |
+| `osint_crosslinked` | LinkedIn employee enum via search engines (passive) |
+| `osint_inspy` | Employee + tech stack enumeration (EmpSpy/TechSpy) |
+| `osint_linkedin2username` | Authenticated LinkedIn scraping (requires credentials) |
+| `osint_sherlock` | Username search across 400+ social media sites |
+| `osint_people_recon` | Full people recon pipeline (composite tool) |
 | `osint_xray` | Network recon with XRay |
 | `osint_datasploit` | OSINT visualizer |
 | `osint_list_tools` | List tools and installation status |
@@ -427,7 +464,7 @@ Reports are saved in three formats under `results/<target>/<timestamp>/`:
 - `report.md` — markdown summary with findings tables
 - `report.html` — styled dark-theme HTML report
 
-Findings are deduplicated across tools and normalized into types: email, subdomain, IP address, person, document, credential, technology, vulnerability, social profile, geolocation, metadata, DNS record, port/service, ASN, sensitive file.
+Findings are deduplicated across tools and normalized into types: email, subdomain, IP address, person, document, credential, technology, vulnerability, social profile, geolocation, metadata, DNS record, port/service, ASN, sensitive file, username.
 
 ## Docker (Alternative)
 

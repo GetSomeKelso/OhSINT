@@ -12,6 +12,13 @@ from src.tools.github_dorks import GithubDorks
 # API-based tools
 from src.tools.brave_search import BraveSearch
 
+# LinkedIn / People Recon
+from src.tools.crosslinked import CrossLinked
+from src.tools.inspy import InSpy
+from src.tools.linkedin2username import LinkedIn2Username
+from src.tools.sherlock_tool import SherlockTool
+from src.tools.linkedint import LinkedInt
+
 # Tier 2 — CLI-Compatible, May Need Wrapper Logic
 from src.tools.xray import XRay
 from src.tools.goodork import GooDork
@@ -32,6 +39,12 @@ __all__ = [
     "GithubDorks",
     # API-based
     "BraveSearch",
+    # LinkedIn / People Recon
+    "CrossLinked",
+    "InSpy",
+    "LinkedIn2Username",
+    "SherlockTool",
+    "LinkedInt",
     # Tier 2
     "XRay",
     "GooDork",

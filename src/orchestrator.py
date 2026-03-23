@@ -128,9 +128,17 @@ class Orchestrator:
         failed: List[str] = []
 
         # Determine which tools can run in parallel vs sequential
-        sequential_tools = {"spiderfoot", "recon_ng"}
-        parallel_batch = [n for n in tool_names if n not in sequential_tools and n in self._tools]
+        # Heavy tools and tools requiring credentials run sequentially
+        sequential_tools = {"spiderfoot", "recon_ng", "linkedin2username"}
+        # Sherlock runs AFTER people-discovery tools (CrossLinked, InSpy, linkedin2username)
+        # to consume their discovered names as input
+        post_pipeline_tools = {"sherlock"}
+        parallel_batch = [
+            n for n in tool_names
+            if n not in sequential_tools and n not in post_pipeline_tools and n in self._tools
+        ]
         sequential_batch = [n for n in tool_names if n in sequential_tools and n in self._tools]
+        post_batch = [n for n in tool_names if n in post_pipeline_tools and n in self._tools]
         skipped = [n for n in tool_names if n not in self._tools]
 
         logger.info(
@@ -172,6 +180,43 @@ class Orchestrator:
                 failed.append(name)
             else:
                 executed.append(name)
+
+        # Run post-pipeline tools (e.g., Sherlock consumes discovered people)
+        if post_batch:
+            # Collect person names and usernames from prior results
+            discovered_usernames = set()
+            for r in results:
+                for person in r.structured_data.get("people", []):
+                    # Generate username variants from person names
+                    parts = person.lower().split()
+                    if len(parts) >= 2:
+                        first, last = parts[0], parts[-1]
+                        discovered_usernames.add(f"{first[0]}{last}")      # jsmith
+                        discovered_usernames.add(f"{first}.{last}")        # john.smith
+                        discovered_usernames.add(f"{first}{last[0]}")      # johns
+                for username in r.structured_data.get("usernames", []):
+                    discovered_usernames.add(username)
+
+            if discovered_usernames:
+                for name in post_batch:
+                    kwargs = dict(tool_kwargs.get(name, {}))
+                    kwargs["usernames"] = sorted(discovered_usernames)
+                    result = self._run_single(name, resolved, kwargs)
+                    results.append(result)
+                    if result.errors:
+                        failed.append(name)
+                    else:
+                        executed.append(name)
+            else:
+                logger.info("No usernames discovered — skipping post-pipeline tools: %s", post_batch)
+                for name in post_batch:
+                    # Run with the raw target as fallback
+                    result = self._run_single(name, resolved, tool_kwargs.get(name, {}))
+                    results.append(result)
+                    if result.errors:
+                        failed.append(name)
+                    else:
+                        executed.append(name)
 
         for name in skipped:
             logger.warning("Tool %s not registered, skipping", name)

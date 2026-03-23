@@ -20,6 +20,10 @@ passive:
         dorks: "ghdb_passive"
     - brave_search:
         queries: "all"
+    - crosslinked:
+        email_format: "{first}.{last}@{domain}"
+    - inspy:
+        mode: "both"
 
 active:
   description: "Active recon — direct interaction with target (requires explicit auth)"
@@ -31,6 +35,9 @@ active:
         modules: "active_set"
     - xray:
         mode: "full"
+    - linkedin2username:
+        depth: 5
+        sleep: 3
 
 metadata:
   description: "Document and metadata focused recon"
@@ -44,6 +51,8 @@ metadata:
         dorks: "filetype_dorks"
     - brave_search:
         queries: "documents"
+    - inspy:
+        mode: "techspy"
 
 social:
   description: "People and social media focused recon"
@@ -55,6 +64,29 @@ social:
         target_type: "person_name"
     - creepy:
         mode: "social"
+    - crosslinked:
+        email_format: "{first}.{last}@{domain}"
+    - inspy:
+        mode: "empspy"
+    - sherlock:
+        batch: true
+        csv: true
+
+people:
+  description: "People and employee reconnaissance — LinkedIn enumeration, username discovery, social profile mapping"
+  tools:
+    - crosslinked:
+        email_format: "{first}.{last}@{domain}"
+    - inspy:
+        mode: "both"
+    - linkedin2username:
+        depth: 5
+        sleep: 3
+    - sherlock:
+        batch: true
+        csv: true
+    - theharvester:
+        sources: "linkedin,google,bing"
 
 full:
   description: "All tools, all modules — comprehensive recon"
@@ -68,3 +100,12 @@ full:
         mode: "full"
     - creepy:
         mode: "social"
+    - crosslinked:
+        email_format: "{first}.{last}@{domain}"
+    - inspy:
+        mode: "both"
+    - sherlock:
+        batch: true
+        csv: true
+    - linkedint:
+        mode: "full"

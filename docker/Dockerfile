@@ -40,15 +40,30 @@ RUN pip3 install --break-system-packages metagoofil || true
 # github-dorks
 RUN pip3 install --break-system-packages github-dorks || true
 
+# LinkedIn / People recon tools
+RUN pip3 install --break-system-packages crosslinked sherlock-project || true
+
 # Ruby tools
 RUN gem install vcsmap || true
+
+# Selenium deps for linkedin2username
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium chromium-driver \
+    && rm -rf /var/lib/apt/lists/*
 
 # Clone remaining tools
 WORKDIR /opt/tools
 RUN git clone --depth 1 https://github.com/upgoingstar/datasploit.git || true \
     && git clone --depth 1 https://github.com/Smaash/snitch.git || true \
     && git clone --depth 1 https://github.com/ilektrojohn/creepy.git || true \
-    && git clone --depth 1 https://github.com/arimogi/Google-Dorks.git || true
+    && git clone --depth 1 https://github.com/arimogi/Google-Dorks.git || true \
+    && git clone --depth 1 https://github.com/jobroche/InSpy.git || true \
+    && git clone --depth 1 https://github.com/initstring/linkedin2username.git || true \
+    && git clone --depth 1 https://github.com/mdsecactivebreach/LinkedInt.git || true
+
+# InSpy and linkedin2username dependencies
+RUN cd /opt/tools/InSpy && pip3 install --break-system-packages -r requirements.txt || true \
+    && cd /opt/tools/linkedin2username && pip3 install --break-system-packages -r requirements.txt || true
 
 # Install the orchestrator
 WORKDIR /app
