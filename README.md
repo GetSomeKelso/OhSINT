@@ -56,7 +56,7 @@ Profiles are defined in `configs/scan_profiles.yaml`.
 
 ```
 src/
-├── cli.py              # Click CLI (osint-orchestrator)
+├── cli.py              # Click CLI (ohsint)
 ├── config.py           # Config loader (API keys, profiles)
 ├── models.py           # Pydantic models (ToolResult, IntelFinding, ReconReport)
 ├── orchestrator.py     # Parallel/sequential tool execution engine
@@ -208,7 +208,7 @@ gem install vcsmap
 ```bash
 cd ~/Tools/OhSINT
 source .venv/bin/activate
-osint-orchestrator install-check
+ohsint install-check
 ```
 
 All 20 tools should show ✓ (LinkedInt may show as non-functional — this is expected).
@@ -244,7 +244,7 @@ GitHub token scopes needed: `public_repo`, `read:org`, `read:user` (read-only, n
 Check key status:
 
 ```bash
-osint-orchestrator api-keys
+ohsint api-keys
 ```
 
 API keys can also be set via environment variables: `OSINT_<TOOL>_<KEY>` (uppercased).
@@ -394,25 +394,25 @@ Restart Claude Code for the tools to load.
 
 ```bash
 # Dry run first — see what would execute
-osint-orchestrator full-recon -t example.com -p passive --authorization --dry-run
+ohsint full-recon -t example.com -p passive --authorization --dry-run
 
 # Full passive recon
-osint-orchestrator full-recon -t example.com -p passive --authorization
+ohsint full-recon -t example.com -p passive --authorization
 
 # Active recon (direct interaction with target)
-osint-orchestrator full-recon -t example.com -p active --authorization
+ohsint full-recon -t example.com -p active --authorization
 
 # Single tool
-osint-orchestrator tool -t example.com theharvester --authorization
+ohsint tool -t example.com theharvester --authorization
 
 # List tools and installation status
-osint-orchestrator list-tools
+ohsint list-tools
 
 # Check everything is configured
-osint-orchestrator install-check
+ohsint install-check
 
 # Show API key status
-osint-orchestrator api-keys
+ohsint api-keys
 ```
 
 ### CLI Options

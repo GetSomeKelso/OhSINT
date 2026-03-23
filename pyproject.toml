@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "osint-orchestrator"
+name = "ohsint"
 version = "0.1.0"
 description = "Unified OSINT reconnaissance orchestrator wrapping multiple tools"
 readme = "README.md"
@@ -28,7 +28,7 @@ dev = [
 ]
 
 [project.scripts]
-osint-orchestrator = "src.cli:cli"
+ohsint = "src.cli:cli"
 ohsint-mcp = "src.mcp.server:main"
 
 [tool.setuptools.packages.find]

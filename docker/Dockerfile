@@ -73,4 +73,4 @@ RUN pip3 install --break-system-packages -e .
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python3 -c "import src.mcp.server" || exit 1
 
-ENTRYPOINT ["osint-orchestrator"]
+ENTRYPOINT ["ohsint"]
