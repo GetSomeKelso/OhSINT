@@ -31,6 +31,8 @@ class IntelType(str, Enum):
     ASN = "asn"
     SENSITIVE_FILE = "sensitive_file"
     USERNAME = "username"
+    CERTIFICATE = "certificate"
+    WHOIS_RECORD = "whois_record"
 
 
 class ToolResult(BaseModel):

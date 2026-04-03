@@ -11,6 +11,11 @@ from src.tools.github_dorks import GithubDorks
 
 # API-based tools
 from src.tools.brave_search import BraveSearch
+from src.tools.crtsh import CrtSh
+
+# Passive infrastructure
+from src.tools.subfinder import Subfinder
+from src.tools.whois_tool import WhoisTool
 
 # LinkedIn / People Recon
 from src.tools.crosslinked import CrossLinked
@@ -39,6 +44,10 @@ __all__ = [
     "GithubDorks",
     # API-based
     "BraveSearch",
+    "CrtSh",
+    # Passive infrastructure
+    "Subfinder",
+    "WhoisTool",
     # LinkedIn / People Recon
     "CrossLinked",
     "InSpy",

@@ -358,6 +358,51 @@ async def osint_datasploit(
     )
 
 
+# ---------------------------------------------------------------------------
+# Passive infrastructure tools
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_subfinder(
+    domain: str,
+    all_sources: bool = True,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Fast passive subdomain enumeration via 40+ APIs (crt.sh, SecurityTrails, VirusTotal, etc.).
+
+    Zero target interaction — queries public data sources only.
+    """
+    return await _run_tool_audited(
+        "subfinder", domain, authorization_confirmed,
+        all_sources=all_sources,
+    )
+
+
+@mcp.tool()
+async def osint_crtsh(
+    domain: str,
+    wildcard: bool = True,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Search Certificate Transparency logs for subdomains and certificates.
+
+    Queries crt.sh for all SSL/TLS certificates ever issued for the domain.
+    Discovers subdomains, wildcard patterns, certificate timelines, and issuers.
+    """
+    return await _run_tool_audited(
+        "crtsh", domain, authorization_confirmed,
+        wildcard=wildcard,
+    )
+
+
+@mcp.tool()
+async def osint_whois(
+    target: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """WHOIS domain registration lookup — registrant info, dates, name servers, registrar."""
+    return await _run_tool_audited("whois", target, authorization_confirmed)
+
+
 # --- Previously missing tool endpoints ---
 
 

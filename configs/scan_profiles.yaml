@@ -3,6 +3,11 @@
 passive:
   description: "Passive recon only — zero interaction with target infrastructure"
   tools:
+    - subfinder:
+        all_sources: true
+    - crtsh:
+        wildcard: true
+    - whois
     - theharvester:
         sources: "google,bing,linkedin,dnsdumpster"
     - shodan:
@@ -88,10 +93,30 @@ people:
     - theharvester:
         sources: "linkedin,google,bing"
 
+infrastructure:
+  description: "Passive domain and infrastructure intelligence — subdomains, certificates, WHOIS, DNS"
+  tools:
+    - subfinder:
+        all_sources: true
+    - crtsh:
+        wildcard: true
+    - whois
+    - theharvester:
+        sources: "google,bing,dnsdumpster"
+    - shodan:
+        mode: "search"
+    - brave_search:
+        queries: "subdomains"
+
 full:
   description: "All tools, all modules — comprehensive recon"
   inherits: active
   tools:
+    - subfinder:
+        all_sources: true
+    - crtsh:
+        wildcard: true
+    - whois
     - datasploit:
         mode: "full"
     - snitch:
