@@ -454,6 +454,43 @@ async def osint_waymore(
     )
 
 
+# ---------------------------------------------------------------------------
+# Expanded identity OSINT
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_maigret(
+    usernames: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Search for usernames across 3,000+ sites with profile data extraction.
+
+    usernames: Comma-separated list. Better false-positive filtering than Sherlock.
+    Extracts profile data (names, bios, links) not just presence detection.
+    """
+    username_list = [u.strip() for u in usernames.split(",") if u.strip()]
+    return await _run_tool_audited(
+        "maigret", usernames, authorization_confirmed,
+        usernames=username_list,
+    )
+
+
+@mcp.tool()
+async def osint_holehe(
+    email: str,
+    only_used: bool = True,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Check which platforms an email is registered on via password reset endpoints.
+
+    Checks 120+ platforms. Different approach than username search —
+    tells you WHERE an email is registered (Twitter, Instagram, Spotify, etc.).
+    """
+    return await _run_tool_audited(
+        "holehe", email, authorization_confirmed,
+        only_used=only_used,
+    )
+
+
 # --- Previously missing tool endpoints ---
 
 

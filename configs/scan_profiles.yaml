@@ -80,6 +80,8 @@ social:
     - sherlock:
         batch: true
         csv: true
+    - maigret
+    - holehe
 
 people:
   description: "People and employee reconnaissance — LinkedIn enumeration, username discovery, social profile mapping"
@@ -94,6 +96,8 @@ people:
     - sherlock:
         batch: true
         csv: true
+    - maigret
+    - holehe
     - theharvester:
         sources: "linkedin,google,bing"
 

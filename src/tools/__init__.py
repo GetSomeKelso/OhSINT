@@ -22,6 +22,10 @@ from src.tools.virustotal import VirusTotalTool
 from src.tools.h8mail import H8mail
 from src.tools.waymore import Waymore
 
+# Expanded identity OSINT
+from src.tools.maigret_tool import MaigretTool
+from src.tools.holehe_tool import HoleheTool
+
 # LinkedIn / People Recon
 from src.tools.crosslinked import CrossLinked
 from src.tools.inspy import InSpy
@@ -57,6 +61,9 @@ __all__ = [
     "VirusTotalTool",
     "H8mail",
     "Waymore",
+    # Expanded identity OSINT
+    "MaigretTool",
+    "HoleheTool",
     # LinkedIn / People Recon
     "CrossLinked",
     "InSpy",

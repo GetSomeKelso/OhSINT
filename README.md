@@ -1,6 +1,6 @@
 # OhSINT
 
-Unified OSINT reconnaissance orchestrator that wraps 26 open-source intelligence tools behind a single CLI and MCP server. Designed to run on Kali Linux and connect to Claude Desktop on a Windows host via SSE.
+Unified OSINT reconnaissance orchestrator that wraps 28 open-source intelligence tools behind a single CLI and MCP server. Designed to run on Kali Linux and connect to Claude Desktop on a Windows host via SSE.
 
 ## Tools
 
@@ -24,6 +24,8 @@ Unified OSINT reconnaissance orchestrator that wraps 26 open-source intelligence
 | InSpy | Employee enumeration + tech stack from job listings | git clone |
 | linkedin2username | Authenticated LinkedIn scraping via Selenium | git clone |
 | Sherlock | Username search across 400+ social media sites | `pip` |
+| Maigret | Username search across 3,000+ sites with profile data extraction | `pip` |
+| Holehe | Email-to-platform registration check via password reset endpoints | `pip` |
 | LinkedInt | LinkedIn profile deep-scraping (archived, Tier 2) | git clone |
 
 ### Passive Infrastructure
@@ -467,6 +469,8 @@ When connected via Claude Desktop, the following tools are available:
 | `osint_virustotal` | Domain/IP threat reputation via VirusTotal |
 | `osint_h8mail` | Email breach hunting (HIBP, Snusbase, etc.) |
 | `osint_waymore` | Web archive URL extraction (Wayback, Common Crawl) |
+| `osint_maigret` | Username search across 3,000+ sites (better than Sherlock) |
+| `osint_holehe` | Email-to-platform registration check (120+ sites) |
 | `osint_crosslinked` | LinkedIn employee enum via search engines (passive) |
 | `osint_inspy` | Employee + tech stack enumeration (EmpSpy/TechSpy) |
 | `osint_linkedin2username` | Authenticated LinkedIn scraping (requires credentials) |
