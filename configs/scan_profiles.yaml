@@ -29,6 +29,10 @@ passive:
         email_format: "{first}.{last}@{domain}"
     - inspy:
         mode: "both"
+    - virustotal
+    - h8mail
+    - waymore:
+        mode: "U"
 
 active:
   description: "Active recon — direct interaction with target (requires explicit auth)"
@@ -93,6 +97,16 @@ people:
     - theharvester:
         sources: "linkedin,google,bing"
 
+threat-intel:
+  description: "Threat intelligence and breach exposure — reputation, breaches, archived attack surface"
+  tools:
+    - virustotal
+    - h8mail
+    - waymore:
+        mode: "U"
+    - shodan:
+        mode: "search"
+
 infrastructure:
   description: "Passive domain and infrastructure intelligence — subdomains, certificates, WHOIS, DNS"
   tools:
@@ -117,6 +131,10 @@ full:
     - crtsh:
         wildcard: true
     - whois
+    - virustotal
+    - h8mail
+    - waymore:
+        mode: "U"
     - datasploit:
         mode: "full"
     - snitch:

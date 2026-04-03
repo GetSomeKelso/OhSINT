@@ -11,6 +11,10 @@ mcp_server:
 shodan:
   api_key: ""
 
+virustotal:
+  # https://www.virustotal.com/gui/my-apikey — free tier: 4 req/min, 500/day
+  api_key: ""
+
 brave:
   api_key: ""  # https://brave.com/search/api/ — free tier: 2,000 queries/month
 

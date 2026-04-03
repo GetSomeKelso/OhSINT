@@ -403,6 +403,57 @@ async def osint_whois(
     return await _run_tool_audited("whois", target, authorization_confirmed)
 
 
+# ---------------------------------------------------------------------------
+# Threat intel & breach data tools
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_virustotal(
+    target: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Check domain or IP reputation via VirusTotal — malicious scores, DNS, categories, subdomains.
+
+    Free tier: 4 requests/minute. Queries are spaced automatically.
+    """
+    return await _run_tool_audited("virustotal", target, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_h8mail(
+    target: str,
+    chase: bool = False,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Email breach hunting — checks HIBP, Snusbase, LeakLookup, Dehashed, IntelX.
+
+    target: email address or domain to check for breaches.
+    chase: follow related emails found in breach data.
+    """
+    return await _run_tool_audited(
+        "h8mail", target, authorization_confirmed, chase=chase,
+    )
+
+
+@mcp.tool()
+async def osint_waymore(
+    domain: str,
+    mode: str = "U",
+    limit: int = 0,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Extract archived URLs from Wayback Machine, Common Crawl, AlienVault OTX, URLScan.
+
+    Discovers forgotten endpoints, old configs, leaked files, and historical subdomains.
+    mode: U (URLs only), R (responses), B (both).
+    """
+    kwargs: dict[str, Any] = {"mode": mode}
+    if limit > 0:
+        kwargs["limit"] = limit
+    return await _run_tool_audited(
+        "waymore", domain, authorization_confirmed, **kwargs,
+    )
+
+
 # --- Previously missing tool endpoints ---
 
 

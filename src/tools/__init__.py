@@ -17,6 +17,11 @@ from src.tools.crtsh import CrtSh
 from src.tools.subfinder import Subfinder
 from src.tools.whois_tool import WhoisTool
 
+# Threat intel & breach data
+from src.tools.virustotal import VirusTotalTool
+from src.tools.h8mail import H8mail
+from src.tools.waymore import Waymore
+
 # LinkedIn / People Recon
 from src.tools.crosslinked import CrossLinked
 from src.tools.inspy import InSpy
@@ -48,6 +53,10 @@ __all__ = [
     # Passive infrastructure
     "Subfinder",
     "WhoisTool",
+    # Threat intel & breach data
+    "VirusTotalTool",
+    "H8mail",
+    "Waymore",
     # LinkedIn / People Recon
     "CrossLinked",
     "InSpy",

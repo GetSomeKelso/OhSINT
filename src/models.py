@@ -33,6 +33,8 @@ class IntelType(str, Enum):
     USERNAME = "username"
     CERTIFICATE = "certificate"
     WHOIS_RECORD = "whois_record"
+    BREACH = "breach"
+    REPUTATION = "reputation"
 
 
 class ToolResult(BaseModel):

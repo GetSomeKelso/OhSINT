@@ -1,6 +1,6 @@
 # OhSINT
 
-Unified OSINT reconnaissance orchestrator that wraps 23 open-source intelligence tools behind a single CLI and MCP server. Designed to run on Kali Linux and connect to Claude Desktop on a Windows host via SSE.
+Unified OSINT reconnaissance orchestrator that wraps 26 open-source intelligence tools behind a single CLI and MCP server. Designed to run on Kali Linux and connect to Claude Desktop on a Windows host via SSE.
 
 ## Tools
 
@@ -34,6 +34,14 @@ Unified OSINT reconnaissance orchestrator that wraps 23 open-source intelligence
 | crt.sh | Certificate Transparency log search | API-based (httpx) |
 | WHOIS | Domain registration and ownership lookup | `apt` (pre-installed on Kali) |
 
+### Threat Intel & Breach Data
+
+| Tool | Description | Install Method |
+|------|-------------|----------------|
+| VirusTotal | Domain/IP threat reputation — malicious scores, DNS, categories | API-based (httpx) |
+| h8mail | Email breach hunting — HIBP, Snusbase, LeakLookup, Dehashed | `pip` |
+| waymore | Web archive URL extraction — Wayback Machine, Common Crawl, OTX | `pip` |
+
 ### Tier 2 — CLI-Compatible
 
 | Tool | Description | Install Method |
@@ -53,6 +61,7 @@ Unified OSINT reconnaissance orchestrator that wraps 23 open-source intelligence
 |---------|-------------|
 | `passive` | Zero interaction with target infrastructure |
 | `infrastructure` | Passive domain intel — subdomains, certificates, WHOIS, DNS |
+| `threat-intel` | Threat reputation, breach exposure, archived attack surface |
 | `active` | Direct interaction with target (inherits passive) |
 | `metadata` | Document and metadata focused |
 | `social` | People and social media focused |
@@ -455,6 +464,9 @@ When connected via Claude Desktop, the following tools are available:
 | `osint_subfinder` | Fast passive subdomain enumeration via 40+ APIs |
 | `osint_crtsh` | Certificate Transparency log search |
 | `osint_whois` | WHOIS domain registration lookup |
+| `osint_virustotal` | Domain/IP threat reputation via VirusTotal |
+| `osint_h8mail` | Email breach hunting (HIBP, Snusbase, etc.) |
+| `osint_waymore` | Web archive URL extraction (Wayback, Common Crawl) |
 | `osint_crosslinked` | LinkedIn employee enum via search engines (passive) |
 | `osint_inspy` | Employee + tech stack enumeration (EmpSpy/TechSpy) |
 | `osint_linkedin2username` | Authenticated LinkedIn scraping (requires credentials) |
