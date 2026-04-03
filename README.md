@@ -1,6 +1,6 @@
 # OhSINT
 
-Unified OSINT reconnaissance orchestrator that wraps 28 open-source intelligence tools behind a single CLI and MCP server. Designed to run on Kali Linux and connect to Claude Desktop on a Windows host via SSE.
+Unified OSINT reconnaissance orchestrator that wraps 28 open-source intelligence tools behind a single CLI and MCP server. Runs on a Kali Linux VM and connects to Claude Desktop or Claude Code on a Windows host via SSE (using `mcp-remote` as a bridge). See [docs/mcp-setup.md](docs/mcp-setup.md) for the full connection guide.
 
 ## Tools
 
