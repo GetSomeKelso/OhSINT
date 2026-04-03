@@ -90,9 +90,6 @@ people:
         email_format: "{first}.{last}@{domain}"
     - inspy:
         mode: "both"
-    - linkedin2username:
-        depth: 5
-        sleep: 3
     - sherlock:
         batch: true
         csv: true
