@@ -86,8 +86,16 @@ src/
 ├── mcp/
 │   └── server.py       # MCP server (ohsint-mcp) — SSE transport
 └── tools/
-    ├── base.py         # BaseTool ABC
-    ├── brave_search.py # Brave Search API
+    ├── base.py              # BaseTool ABC (is_passive, validate_target, _sanitize_command)
+    ├── brave_search.py      # Brave Search API
+    ├── crtsh.py             # Certificate Transparency log search (API)
+    ├── subfinder.py         # Passive subdomain enumeration (40+ APIs)
+    ├── whois_tool.py        # WHOIS/RDAP domain registration lookup
+    ├── virustotal.py        # Domain/IP threat reputation (API)
+    ├── h8mail.py            # Email breach hunting
+    ├── waymore.py           # Web archive URL extraction
+    ├── maigret_tool.py      # Username search (3,000+ sites)
+    ├── holehe_tool.py       # Email-to-platform registration check
     ├── theharvester.py
     ├── spiderfoot.py
     ├── recon_ng.py
@@ -95,11 +103,11 @@ src/
     ├── shodan_tool.py
     ├── exiftool.py
     ├── github_dorks.py
-    ├── crosslinked.py  # LinkedIn employee enum (passive)
-    ├── inspy.py        # EmpSpy + TechSpy
-    ├── linkedin2username.py  # Authenticated LinkedIn scraping
-    ├── sherlock_tool.py      # Username search (400+ sites)
-    ├── linkedint.py    # LinkedIn deep-scraping (archived)
+    ├── crosslinked.py       # LinkedIn employee enum (passive)
+    ├── inspy.py             # EmpSpy + TechSpy
+    ├── linkedin2username.py # Authenticated LinkedIn scraping
+    ├── sherlock_tool.py     # Username search (400+ sites)
+    ├── linkedint.py         # LinkedIn deep-scraping (archived)
     ├── xray.py
     ├── goodork.py
     ├── dork_cli.py
