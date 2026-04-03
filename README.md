@@ -75,6 +75,22 @@ Profiles are defined in `configs/scan_profiles.yaml`.
 ## Architecture
 
 ```
+┌─────────────────────┐     SSE / mcp-remote      ┌─────────────────────────┐
+│   Windows Host      │◄──────────────────────────►│   Kali Linux VM         │
+│                     │    http://<IP>:8055/sse     │                         │
+│  Claude Desktop     │                            │  ohsint-mcp server      │
+│  Claude Code        │                            │    ├── Bearer token auth │
+│  .mcp.json          │                            │    ├── Audit log         │
+│                     │                            │    └── DNS rebinding     │
+└─────────────────────┘                            │                         │
+                                                   │  ohsint CLI             │
+                                                   │    └── 28 tool wrappers │
+                                                   └─────────────────────────┘
+```
+
+### Source Layout
+
+```
 src/
 ├── cli.py              # Click CLI (ohsint)
 ├── config.py           # Config loader (API keys, profiles)
