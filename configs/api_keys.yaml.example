@@ -1,6 +1,12 @@
-# OSINT Orchestrator — API Key Configuration
+# OhSINT — API Key Configuration
 # Copy this file to api_keys.yaml and fill in your keys.
 # NEVER commit api_keys.yaml to version control.
+
+mcp_server:
+  # Bearer token for MCP SSE authentication (MCP07)
+  # Generate: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+  # Also settable via OHSINT_MCP_TOKEN env var
+  bearer_token: ""
 
 shodan:
   api_key: ""

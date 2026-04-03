@@ -15,6 +15,7 @@ DEFAULT_PROFILES_FILE = DEFAULT_CONFIG_DIR / "scan_profiles.yaml"
 DEFAULT_RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 DEFAULT_TIMEOUT = 300  # seconds per tool
 DEFAULT_DORK_DELAY = 3.0  # seconds between Google dork queries
+DEFAULT_MCP_TOKEN_ENV = "OHSINT_MCP_TOKEN"
 
 
 class Config:
@@ -95,6 +96,13 @@ class Config:
     def get_all_api_keys(self) -> Dict[str, Any]:
         """Return the full API keys dict (for install-check)."""
         return dict(self._api_keys)
+
+    def get_mcp_token(self) -> Optional[str]:
+        """Get MCP bearer token. Checks config file then env var."""
+        token = (self._api_keys.get("mcp_server") or {}).get("bearer_token")
+        if token:
+            return str(token)
+        return os.environ.get(DEFAULT_MCP_TOKEN_ENV)
 
     def api_keys_file_exists(self) -> bool:
         return self.api_keys_path.exists()

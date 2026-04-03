@@ -6,6 +6,8 @@ import csv
 import io
 import os
 import re
+import shutil
+import stat
 import tempfile
 from typing import List
 
@@ -30,8 +32,12 @@ class SherlockTool(BaseTool):
             # Split on comma or space if multiple provided
             usernames = [u.strip() for u in re.split(r'[,\s]+', target) if u.strip()]
 
-        output_dir = kwargs.get("output_dir", tempfile.gettempdir())
+        output_dir = kwargs.get("output_dir")
+        if not output_dir:
+            output_dir = tempfile.mkdtemp(prefix="ohsint_sherlock_")
+            os.chmod(output_dir, stat.S_IRWXU)  # 0o700 — owner only (MCP10)
         self._output_dir = output_dir
+        self._owns_output_dir = "output_dir" not in kwargs
         self._usernames = usernames
 
         cmd = [self.binary_name]
@@ -53,7 +59,7 @@ class SherlockTool(BaseTool):
         usernames_found = set()
         findings = []
 
-        output_dir = getattr(self, "_output_dir", tempfile.gettempdir())
+        output_dir = getattr(self, "_output_dir", tempfile.mkdtemp(prefix="ohsint_sherlock_"))
         search_usernames = getattr(self, "_usernames", [target])
 
         # Parse CSV output files — one per username
@@ -122,6 +128,15 @@ class SherlockTool(BaseTool):
         # Extract total count from stdout
         total_match = re.search(r'Search completed with (\d+) results', raw_output)
         total_found = int(total_match.group(1)) if total_match else len(profiles)
+
+        # Clean up private temp dir after parsing (MCP10)
+        if getattr(self, "_owns_output_dir", False):
+            tmp = getattr(self, "_output_dir", None)
+            if tmp and os.path.isdir(tmp):
+                try:
+                    shutil.rmtree(tmp)
+                except OSError:
+                    pass
 
         return ToolResult(
             tool_name=self.name,

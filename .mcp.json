@@ -2,7 +2,13 @@
   "mcpServers": {
     "ohsint": {
       "command": "npx",
-      "args": ["mcp-remote", "http://172.23.77.69:8055/sse", "--allow-http"]
+      "args": [
+        "mcp-remote",
+        "http://172.23.77.69:8055/sse",
+        "--allow-http",
+        "--header",
+        "Authorization:Bearer ${OHSINT_MCP_TOKEN}"
+      ]
     }
   }
 }

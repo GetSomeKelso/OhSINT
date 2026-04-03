@@ -466,6 +466,64 @@ Reports are saved in three formats under `results/<target>/<timestamp>/`:
 
 Findings are deduplicated across tools and normalized into types: email, subdomain, IP address, person, document, credential, technology, vulnerability, social profile, geolocation, metadata, DNS record, port/service, ASN, sensitive file, username.
 
+## Security
+
+OhSINT has been audited against OWASP MCP Top 10 and OWASP LLM Top 10.
+
+### Bearer Token Authentication (MCP07)
+
+The MCP server supports bearer token auth to prevent unauthorized tool invocation.
+
+Generate a token:
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Add it to `configs/api_keys.yaml`:
+
+```yaml
+mcp_server:
+  bearer_token: "your-token-here"
+```
+
+Start the server with auth:
+
+```bash
+ohsint-mcp --host 0.0.0.0 --token your-token-here
+```
+
+Set the token on the client side (Windows):
+
+```bash
+# Set environment variable (PowerShell)
+$env:OHSINT_MCP_TOKEN = "your-token-here"
+
+# Or permanently via System Properties > Environment Variables
+```
+
+The `.mcp.json` passes it automatically via `--header "Authorization:Bearer ${OHSINT_MCP_TOKEN}"`.
+
+### Audit Log (MCP08)
+
+All MCP tool invocations are logged to `results/audit.jsonl` with timestamp, tool name, target, success/failure, and execution time.
+
+### DNS Rebinding Protection (LLM06)
+
+When binding to `0.0.0.0`, the server restricts Host headers to private/RFC1918 networks only (10/8, 172.16/12, 192.168/16, 127/8). Add custom allowed hosts:
+
+```bash
+ohsint-mcp --host 0.0.0.0 --allowed-hosts "203.0.113.0/24,10.50.0.0/16"
+```
+
+### Command Sanitization (MCP01)
+
+API keys and credentials are automatically redacted from subprocess command logs.
+
+### Input Validation (MCP05)
+
+All targets are validated against shell injection, path traversal, null bytes, and newline injection before execution.
+
 ## Docker (Alternative)
 
 If you prefer Docker over a full VM:

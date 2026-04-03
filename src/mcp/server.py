@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
+import json as _json
 import logging
 import os
 import sys
+import time as _time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -27,6 +30,90 @@ from src.report import save_report
 logger = logging.getLogger("ohsint.mcp")
 
 mcp = FastMCP("OhSINT OSINT Orchestrator")
+
+# ---------------------------------------------------------------------------
+# Audit log (MCP08)
+# ---------------------------------------------------------------------------
+AUDIT_LOG_PATH = DEFAULT_RESULTS_DIR / "audit.jsonl"
+
+
+def _audit_log(
+    tool_name: str,
+    target: str,
+    authorization_confirmed: bool,
+    success: bool,
+    execution_time: float,
+    error: str = "",
+) -> None:
+    """Append a JSON-lines audit record (MCP08)."""
+    record = {
+        "timestamp": datetime.now().isoformat(),
+        "tool_name": tool_name,
+        "target": target,
+        "initiator": "mcp_client",
+        "authorization_confirmed": authorization_confirmed,
+        "success": success,
+        "execution_time_seconds": round(execution_time, 2),
+    }
+    if error:
+        record["error"] = error[:500]
+    try:
+        AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(_json.dumps(record) + "\n")
+    except OSError as exc:
+        logger.warning("Audit log write failed: %s", exc)
+
+
+async def _run_tool_audited(
+    tool_name: str,
+    target: str,
+    authorization_confirmed: bool,
+    **kwargs: Any,
+) -> str:
+    """Run a tool with authorization check and audit logging."""
+    _require_auth(authorization_confirmed)
+    start = _time.time()
+    try:
+        result = await asyncio.to_thread(
+            _get_orchestrator().run_tool_resolved, tool_name, target, **kwargs
+        )
+        elapsed = _time.time() - start
+        _audit_log(
+            tool_name, target, authorization_confirmed,
+            success=not result.errors, execution_time=elapsed,
+            error=result.errors[0] if result.errors else "",
+        )
+        return _format_result(result)
+    except Exception as exc:
+        _audit_log(
+            tool_name, target, authorization_confirmed,
+            success=False, execution_time=_time.time() - start, error=str(exc),
+        )
+        raise
+
+
+# ---------------------------------------------------------------------------
+# DNS rebinding allowlist (LLM06 / MCP05)
+# ---------------------------------------------------------------------------
+_DEFAULT_ALLOWED_NETWORKS = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+]
+
+
+def _is_allowed_host(host: str, allowed_networks: list) -> bool:
+    """Check if a Host header value is from an allowed private network."""
+    hostname = host.split(":")[0].strip()
+    if hostname in ("localhost", ""):
+        return True
+    try:
+        addr = ipaddress.ip_address(hostname)
+        return any(addr in net for net in allowed_networks)
+    except ValueError:
+        return False
 
 # Shared state — lazy-initialized on first use so config can be loaded after import
 _config: Config | None = None
@@ -73,20 +160,23 @@ async def osint_full_recon(
     Requires written authorization from target owner.
     """
     _require_auth(authorization_confirmed)
+    start = _time.time()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_target = target.replace("/", "_").replace(":", "_")
     output_dir = DEFAULT_RESULTS_DIR / safe_target / timestamp
 
-    orchestrator = Orchestrator(config=_get_config(), timeout=timeout, verbose=True)
-    report = await asyncio.to_thread(
-        orchestrator.run_profile, target, profile, output_dir
-    )
-
-    # Save reports using centralized helper
-    save_report(report, output_dir, output_format)
-    logger.info("Full recon complete: %d findings for %s", len(report.findings), target)
-
-    return report.to_markdown()
+    try:
+        orchestrator = Orchestrator(config=_get_config(), timeout=timeout, verbose=True)
+        report = await asyncio.to_thread(
+            orchestrator.run_profile, target, profile, output_dir
+        )
+        save_report(report, output_dir, output_format)
+        logger.info("Full recon complete: %d findings for %s", len(report.findings), target)
+        _audit_log("full_recon", target, True, True, _time.time() - start)
+        return report.to_markdown()
+    except Exception as exc:
+        _audit_log("full_recon", target, True, False, _time.time() - start, str(exc))
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -100,12 +190,10 @@ async def osint_theharvester(
     authorization_confirmed: bool = False,
 ) -> str:
     """Harvest emails, subdomains, IPs from search engines for a domain."""
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "theharvester", domain, sources=sources, limit=limit,
+    return await _run_tool_audited(
+        "theharvester", domain, authorization_confirmed,
+        sources=sources, limit=limit,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -119,12 +207,10 @@ async def osint_spiderfoot(
 
     use_case options: all, footprint, investigate, passive.
     """
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "spiderfoot", target, use_case=use_case, output_format=output_format,
+    return await _run_tool_audited(
+        "spiderfoot", target, authorization_confirmed,
+        use_case=use_case, output_format=output_format,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -137,12 +223,9 @@ async def osint_recon_ng(
 
     modules options: passive, active_set.
     """
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "recon_ng", target, modules=modules,
+    return await _run_tool_audited(
+        "recon_ng", target, authorization_confirmed, modules=modules,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -153,12 +236,10 @@ async def osint_metagoofil(
     authorization_confirmed: bool = False,
 ) -> str:
     """Harvest and analyze document metadata from a domain."""
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "metagoofil", domain, filetypes=filetypes, max_results=max_results,
+    return await _run_tool_audited(
+        "metagoofil", domain, authorization_confirmed,
+        filetypes=filetypes, max_results=max_results,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -171,12 +252,9 @@ async def osint_shodan(
 
     mode options: search, host, domain.
     """
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "shodan", query, mode=mode,
+    return await _run_tool_audited(
+        "shodan", query, authorization_confirmed, mode=mode,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -186,12 +264,10 @@ async def osint_exiftool(
     authorization_confirmed: bool = False,
 ) -> str:
     """Extract metadata from downloaded files in a directory."""
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "exiftool", directory, filter_fields=filter_fields,
+    return await _run_tool_audited(
+        "exiftool", directory, authorization_confirmed,
+        filter_fields=filter_fields,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -201,15 +277,12 @@ async def osint_github_dorks(
     authorization_confirmed: bool = False,
 ) -> str:
     """Scan GitHub repos/orgs for sensitive information leaks."""
-    _require_auth(authorization_confirmed)
-    kwargs = {}
+    kwargs: dict[str, Any] = {}
     if dork_file:
         kwargs["dork_file"] = dork_file
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "github_dorks", target, **kwargs,
+    return await _run_tool_audited(
+        "github_dorks", target, authorization_confirmed, **kwargs,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -222,12 +295,10 @@ async def osint_google_dorks(
 
     Categories: all, ghdb_passive, filetype_dorks, login_dorks, sensitive_dorks, directories.
     """
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "dork_cli", domain, dork_category=dork_category,
+    return await _run_tool_audited(
+        "dork_cli", domain, authorization_confirmed,
+        dork_category=dork_category,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -245,12 +316,10 @@ async def osint_brave_search(
     queries: all, subdomains, documents, login_pages, exposed_files,
              directory_listings, config_exposure, error_pages, api_endpoints.
     """
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "brave_search", target, queries=queries, count=count,
+    return await _run_tool_audited(
+        "brave_search", target, authorization_confirmed,
+        queries=queries, count=count,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -260,12 +329,9 @@ async def osint_xray(
     authorization_confirmed: bool = False,
 ) -> str:
     """Run XRay network recon against a target."""
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "xray", target, mode=mode,
+    return await _run_tool_audited(
+        "xray", target, authorization_confirmed, mode=mode,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -275,12 +341,9 @@ async def osint_datasploit(
     authorization_confirmed: bool = False,
 ) -> str:
     """Run DataSploit OSINT visualizer. target_type: domain, email, ip, person."""
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "datasploit", target, target_type=target_type,
+    return await _run_tool_audited(
+        "datasploit", target, authorization_confirmed, target_type=target_type,
     )
-    return _format_result(result)
 
 
 # --- Previously missing tool endpoints ---
@@ -292,12 +355,7 @@ async def osint_snitch(
     authorization_confirmed: bool = False,
 ) -> str:
     """Run Snitch information gathering via dorks against a target."""
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "snitch", target,
-    )
-    return _format_result(result)
+    return await _run_tool_audited("snitch", target, authorization_confirmed)
 
 
 @mcp.tool()
@@ -307,12 +365,9 @@ async def osint_vcsmap(
     authorization_confirmed: bool = False,
 ) -> str:
     """Scan public version control systems for sensitive info about a target."""
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "vcsmap", target, mode=mode,
+    return await _run_tool_audited(
+        "vcsmap", target, authorization_confirmed, mode=mode,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -322,12 +377,9 @@ async def osint_creepy(
     authorization_confirmed: bool = False,
 ) -> str:
     """Geolocation OSINT from social media profiles."""
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "creepy", target, mode=mode,
+    return await _run_tool_audited(
+        "creepy", target, authorization_confirmed, mode=mode,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -338,15 +390,12 @@ async def osint_goodork(
     authorization_confirmed: bool = False,
 ) -> str:
     """Run GooDork Google dorking from CLI against a target."""
-    _require_auth(authorization_confirmed)
     kwargs: dict[str, Any] = {"pages": pages}
     if query:
         kwargs["query"] = query
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "goodork", target, **kwargs,
+    return await _run_tool_audited(
+        "goodork", target, authorization_confirmed, **kwargs,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -419,17 +468,14 @@ async def osint_crosslinked(
     Generates formatted emails based on discovered names.
     No LinkedIn account needed — fully passive.
     """
-    _require_auth(authorization_confirmed)
     kwargs: dict[str, Any] = {}
     if domain:
         kwargs["domain"] = domain
     if email_format:
         kwargs["email_format"] = email_format
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "crosslinked", company_name, **kwargs,
+    return await _run_tool_audited(
+        "crosslinked", company_name, authorization_confirmed, **kwargs,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -447,17 +493,14 @@ async def osint_inspy(
     - techspy: Technology stack fingerprinting from job listings
     - both: Run EmpSpy + TechSpy together
     """
-    _require_auth(authorization_confirmed)
     kwargs: dict[str, Any] = {"mode": mode}
     if domain:
         kwargs["domain"] = domain
     if email_format:
         kwargs["email_format"] = email_format
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "inspy", company_name, **kwargs,
+    return await _run_tool_audited(
+        "inspy", company_name, authorization_confirmed, **kwargs,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -475,13 +518,10 @@ async def osint_linkedin2username(
     Requires LinkedIn credentials in api_keys.yaml.
     WARNING: LinkedIn may rate-limit or ban accounts that scrape aggressively.
     """
-    _require_auth(authorization_confirmed)
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "linkedin2username", company,
+    return await _run_tool_audited(
+        "linkedin2username", company, authorization_confirmed,
         domain=domain, depth=depth, sleep=sleep, keywords=keywords,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -495,14 +535,11 @@ async def osint_sherlock(
     usernames: Comma-separated list of usernames to search.
     Batch mode — all usernames checked in a single invocation.
     """
-    _require_auth(authorization_confirmed)
     username_list = [u.strip() for u in usernames.split(",") if u.strip()]
-    result = await asyncio.to_thread(
-        _get_orchestrator().run_tool_resolved,
-        "sherlock", usernames,
+    return await _run_tool_audited(
+        "sherlock", usernames, authorization_confirmed,
         usernames=username_list, nsfw=nsfw,
     )
-    return _format_result(result)
 
 
 @mcp.tool()
@@ -525,7 +562,7 @@ async def osint_people_recon(
     profile options: passive (1,3-5), active (1-6), full (all tools).
     """
     _require_auth(authorization_confirmed)
-    # Map people-recon profiles to scan profiles
+    start = _time.time()
     profile_map = {"passive": "people", "active": "people", "full": "people"}
     scan_profile = profile_map.get(profile, "people")
 
@@ -533,13 +570,17 @@ async def osint_people_recon(
     safe_target = company_name.replace("/", "_").replace(":", "_").replace(" ", "_")
     output_dir = DEFAULT_RESULTS_DIR / safe_target / timestamp
 
-    orchestrator = Orchestrator(config=_get_config(), timeout=600, verbose=True)
-    report = await asyncio.to_thread(
-        orchestrator.run_profile, company_name, scan_profile, output_dir,
-    )
-
-    save_report(report, output_dir, "all")
-    return report.to_markdown()
+    try:
+        orchestrator = Orchestrator(config=_get_config(), timeout=600, verbose=True)
+        report = await asyncio.to_thread(
+            orchestrator.run_profile, company_name, scan_profile, output_dir,
+        )
+        save_report(report, output_dir, "all")
+        _audit_log("people_recon", company_name, True, True, _time.time() - start)
+        return report.to_markdown()
+    except Exception as exc:
+        _audit_log("people_recon", company_name, True, False, _time.time() - start, str(exc))
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -598,15 +639,20 @@ def main():
     to the Windows host where Claude Desktop connects.
 
     Usage:
-        ohsint-mcp                    # binds to 127.0.0.1:8055
-        ohsint-mcp --host 0.0.0.0     # binds to all interfaces (Hyper-V)
-        ohsint-mcp --port 9000        # custom port
+        ohsint-mcp                              # binds to 127.0.0.1:8055
+        ohsint-mcp --host 0.0.0.0               # binds to all interfaces (Hyper-V)
+        ohsint-mcp --host 0.0.0.0 --token SECRET # with bearer auth
     """
     import argparse
 
     parser = argparse.ArgumentParser(description="OhSINT MCP Server")
-    parser.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1, use 0.0.0.0 for Hyper-V)")
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="Bind address (default: 127.0.0.1, use 0.0.0.0 for Hyper-V)")
     parser.add_argument("--port", type=int, default=8055, help="Port (default: 8055)")
+    parser.add_argument("--token", default=None,
+                        help="Bearer token for auth (or set OHSINT_MCP_TOKEN env var)")
+    parser.add_argument("--allowed-hosts", default=None,
+                        help="Comma-separated extra allowed hosts/CIDRs for DNS rebinding check")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -615,32 +661,77 @@ def main():
         datefmt="%H:%M:%S",
     )
 
+    # Resolve bearer token: CLI flag > config file > env var
+    token = args.token or _get_config().get_mcp_token()
+
     # FastMCP takes host/port in constructor, not run()
     mcp.settings.host = args.host
     mcp.settings.port = args.port
 
-    logger.info(f"Starting OhSINT MCP server on {args.host}:{args.port}")
+    logger.info("Starting OhSINT MCP server on %s:%d", args.host, args.port)
 
-    # MCP 1.26+ validates Host headers via TransportSecurityMiddleware,
-    # rejecting requests with IP-based Host headers (e.g., from Hyper-V).
-    # Disable DNS rebinding protection when binding to 0.0.0.0.
+    if token:
+        logger.info("Bearer token authentication ENABLED")
+    else:
+        logger.warning(
+            "No bearer token configured — MCP server is UNAUTHENTICATED. "
+            "Set --token, OHSINT_MCP_TOKEN, or mcp_server.bearer_token in api_keys.yaml"
+        )
+
+    # --- DNS rebinding protection (MCP05 / LLM06) ---
+    # MCP 1.26+ validates Host headers. When binding to 0.0.0.0 we need to
+    # allow private-network IPs instead of disabling all validation.
     if args.host == "0.0.0.0":
         from mcp.server.transport_security import TransportSecurityMiddleware
 
-        # Patch validate_request to always pass (return None)
-        TransportSecurityMiddleware.validate_request = staticmethod(
-            lambda *a, **kw: None
-        )
-        # Make it an async function that returns None
-        import asyncio
+        allowed_networks = list(_DEFAULT_ALLOWED_NETWORKS)
+        if args.allowed_hosts:
+            for entry in args.allowed_hosts.split(","):
+                entry = entry.strip()
+                try:
+                    allowed_networks.append(ipaddress.ip_network(entry, strict=False))
+                except ValueError:
+                    # Treat as a literal hostname
+                    pass
 
-        async def _allow_all(self, request, is_post=False):
-            return None
+        async def _validate_private_only(self, request, is_post=False):
+            """Allow requests only from private/RFC1918 networks (LLM06)."""
+            if is_post:
+                content_type = request.headers.get("content-type")
+                if content_type and not content_type.lower().startswith("application/json"):
+                    from starlette.responses import Response
+                    return Response("Invalid Content-Type", status_code=400)
+            host = request.headers.get("host", "")
+            if _is_allowed_host(host, allowed_networks):
+                return None
+            logger.warning("Blocked Host header: %s", host)
+            from starlette.responses import Response
+            return Response("Host not allowed", status_code=403)
 
-        TransportSecurityMiddleware.validate_request = _allow_all
-        logger.info("DNS rebinding protection disabled (binding to 0.0.0.0)")
+        TransportSecurityMiddleware.validate_request = _validate_private_only
+        logger.info("DNS rebinding: allowing private networks only")
 
-    mcp.run(transport="sse")
+    # --- Bearer token auth middleware (MCP07) ---
+    if token:
+        import uvicorn
+
+        app = mcp.sse_app()
+
+        async def _auth_wrapper(scope, receive, send):
+            """ASGI middleware that validates Bearer token on all HTTP requests."""
+            if scope["type"] == "http":
+                headers = dict(scope.get("headers", []))
+                auth_header = headers.get(b"authorization", b"").decode()
+                if not auth_header.startswith("Bearer ") or auth_header[7:] != token:
+                    from starlette.responses import PlainTextResponse
+                    response = PlainTextResponse("Unauthorized", status_code=401)
+                    await response(scope, receive, send)
+                    return
+            await app(scope, receive, send)
+
+        uvicorn.run(_auth_wrapper, host=args.host, port=args.port)
+    else:
+        mcp.run(transport="sse")
 
 
 if __name__ == "__main__":

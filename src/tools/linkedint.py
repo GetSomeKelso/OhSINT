@@ -34,15 +34,10 @@ class LinkedInt(BaseTool):
         return os.path.isfile(self._script_path)
 
     def build_command(self, target: str, **kwargs) -> List[str]:
-        # LinkedInt requires environment variables for LinkedIn credentials
-        email = self.config.get_api_key("linkedin", "email") or ""
-        password = self.config.get_api_key("linkedin", "password") or ""
-
-        cmd = ["python3", self._script_path]
-
-        # LinkedInt uses interactive prompts — it's not fully CLI-automatable.
-        # This wrapper constructs what it can, but the tool may need patching.
-        return cmd
+        # LinkedInt is archived and non-functional. If restored, credentials
+        # should be injected via environment variables in a run() override
+        # (following the pattern in github_dorks.py), NOT as CLI arguments.
+        return ["python3", self._script_path]
 
     def run(self, target: str, timeout: int = 300, **kwargs) -> ToolResult:
         """Override run to warn about functionality status."""

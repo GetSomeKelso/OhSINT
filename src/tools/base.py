@@ -19,6 +19,40 @@ logger = logging.getLogger("ohsint.tools")
 # Max bytes to read from subprocess stdout to prevent memory exhaustion
 _MAX_OUTPUT_BYTES = 50 * 1024 * 1024  # 50 MB
 
+# Flags whose next argument contains a secret (MCP01 mitigation)
+_SENSITIVE_FLAGS = frozenset({
+    "-shodan-key", "--shodan-key", "--api-key", "--apikey",
+    "--token", "--api-token", "--password", "--passwd",
+    "--secret", "--key", "-k",
+})
+
+_SENSITIVE_PREFIXES = (
+    "--api-key=", "--apikey=", "--token=", "--password=",
+    "--shodan-key=", "--secret=", "--key=",
+)
+
+
+def _sanitize_command(cmd: List[str]) -> str:
+    """Redact values after known sensitive flags before logging (MCP01)."""
+    sanitized: List[str] = []
+    skip_next = False
+    for i, arg in enumerate(cmd):
+        if skip_next:
+            sanitized.append("[REDACTED]")
+            skip_next = False
+            continue
+        lower = arg.lower()
+        if any(lower.startswith(p) for p in _SENSITIVE_PREFIXES):
+            key_part = arg.split("=", 1)[0]
+            sanitized.append(f"{key_part}=[REDACTED]")
+            continue
+        if lower in _SENSITIVE_FLAGS and i + 1 < len(cmd):
+            sanitized.append(arg)
+            skip_next = True
+            continue
+        sanitized.append(arg)
+    return " ".join(sanitized)
+
 
 def validate_target(target: str) -> Tuple[bool, str]:
     """Basic sanity check on target input.
@@ -34,6 +68,15 @@ def validate_target(target: str) -> Tuple[bool, str]:
     # Reject shell meta-characters that have no place in OSINT targets
     if re.search(r'[;`$|><&]', target):
         return False, f"Target contains disallowed characters: {target!r}"
+    # Reject path traversal (MCP05)
+    if "../" in target or "..\\" in target:
+        return False, f"Target contains path traversal sequence: {target!r}"
+    # Reject null bytes (MCP05)
+    if "\x00" in target:
+        return False, "Target contains null byte"
+    # Reject newlines — potential log/header injection (MCP05)
+    if "\n" in target or "\r" in target:
+        return False, "Target contains newline character"
     return True, ""
 
 
@@ -105,7 +148,7 @@ class BaseTool(ABC):
             )
 
         cmd = self.build_command(target, **kwargs)
-        logger.info("Executing: %s", " ".join(cmd))
+        logger.info("Executing: %s", _sanitize_command(cmd))
         start = time.time()
         try:
             proc = subprocess.run(
