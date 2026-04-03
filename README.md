@@ -6,56 +6,56 @@ Unified OSINT reconnaissance orchestrator that wraps 28 open-source intelligence
 
 ### Tier 1 — CLI-Native, Actively Maintained
 
-| Tool | Description | Install Method |
-|------|-------------|----------------|
-| theHarvester | Harvest emails, subdomains, IPs from search engines | `apt` (Kali) |
-| SpiderFoot | Automated OSINT with 200+ modules | `apt` (Kali) |
-| recon-ng | Modular web reconnaissance framework | `apt` (Kali) |
-| Metagoofil | Document metadata harvesting | git clone |
-| Shodan | Internet-connected device search | `pip` |
-| ExifTool | File metadata extraction | `apt` |
-| github-dorks | GitHub sensitive information scanner | git clone |
+| Tool | Description | Install | API Key |
+|------|-------------|---------|---------|
+| theHarvester | Harvest emails, subdomains, IPs from search engines | `apt` (Kali) | Optional (GitHub, Hunter, IntelX, SecurityTrails) |
+| SpiderFoot | Automated OSINT with 200+ modules | `apt` (Kali) | Optional (VirusTotal, Censys, Hunter, IPinfo) |
+| recon-ng | Modular web reconnaissance framework | `apt` (Kali) | Optional (Shodan, BuiltWith, GitHub, Google) |
+| Metagoofil | Document metadata harvesting | git clone | None |
+| Shodan | Internet-connected device search | `pip` | **Required** (`shodan.api_key`) |
+| ExifTool | File metadata extraction | `apt` | None |
+| github-dorks | GitHub sensitive information scanner | git clone | **Required** (`github_dorks.github_token`) |
 
 ### LinkedIn / People Recon
 
-| Tool | Description | Install Method |
-|------|-------------|----------------|
-| CrossLinked | LinkedIn employee enum via search engine scraping (passive) | `pip` |
-| InSpy | Employee enumeration + tech stack from job listings | git clone |
-| linkedin2username | Authenticated LinkedIn scraping via Selenium | git clone |
-| Sherlock | Username search across 400+ social media sites | `pip` |
-| Maigret | Username search across 3,000+ sites with profile data extraction | `pip` |
-| Holehe | Email-to-platform registration check via password reset endpoints | `pip` |
-| LinkedInt | LinkedIn profile deep-scraping (archived, Tier 2) | git clone |
+| Tool | Description | Install | API Key |
+|------|-------------|---------|---------|
+| CrossLinked | LinkedIn employee enum via search engine scraping (passive) | `pip` | None |
+| InSpy | Employee enumeration + tech stack from job listings | git clone | Optional (Hunter.io) |
+| linkedin2username | Authenticated LinkedIn scraping via Selenium | git clone | **Required** (`linkedin.email`, `linkedin.password`) |
+| Sherlock | Username search across 400+ social media sites | `pip` | None |
+| Maigret | Username search across 3,000+ sites with profile data extraction | `pip` | None |
+| Holehe | Email-to-platform registration check via password reset endpoints | `pip` | None |
+| LinkedInt | LinkedIn profile deep-scraping (archived, Tier 2) | git clone | **Required** (`linkedin.email`, `linkedin.password`) |
 
 ### Passive Infrastructure
 
-| Tool | Description | Install Method |
-|------|-------------|----------------|
-| Subfinder | Fast passive subdomain enumeration via 40+ APIs | `go install` |
-| crt.sh | Certificate Transparency log search | API-based (httpx) |
-| WHOIS | Domain registration and ownership lookup | `apt` (pre-installed on Kali) |
+| Tool | Description | Install | API Key |
+|------|-------------|---------|---------|
+| Subfinder | Fast passive subdomain enumeration via 40+ APIs | `go install` | Optional (improves results with SecurityTrails, Censys, etc.) |
+| crt.sh | Certificate Transparency log search | API-based (httpx) | None |
+| WHOIS | Domain registration and ownership lookup | `apt` (Kali) | None |
 
 ### Threat Intel & Breach Data
 
-| Tool | Description | Install Method |
-|------|-------------|----------------|
-| VirusTotal | Domain/IP threat reputation — malicious scores, DNS, categories | API-based (httpx) |
-| h8mail | Email breach hunting — HIBP, Snusbase, LeakLookup, Dehashed | `pip` |
-| waymore | Web archive URL extraction — Wayback Machine, Common Crawl, OTX | `pip` |
+| Tool | Description | Install | API Key |
+|------|-------------|---------|---------|
+| VirusTotal | Domain/IP threat reputation — malicious scores, DNS, categories | API-based (httpx) | **Required** (`virustotal.api_key`) |
+| h8mail | Email breach hunting — HIBP, Snusbase, LeakLookup, Dehashed | `pip` | Optional (HIBP, Snusbase, LeakLookup keys improve results) |
+| waymore | Web archive URL extraction — Wayback Machine, Common Crawl, OTX | `pip` | None |
 
 ### Tier 2 — CLI-Compatible
 
-| Tool | Description | Install Method |
-|------|-------------|----------------|
-| Brave Search | Web search API for OSINT recon (replaces Bing) | API-based (httpx) |
-| XRay | Network reconnaissance (Go, archived) | git clone + go build |
-| GooDork | Google dorking (Python, not Go) | git clone |
-| dork-cli | Google dork query runner | git clone |
-| DataSploit | OSINT visualizer | git clone |
-| Snitch | Information gathering via dorks | git clone |
-| VcsMap | Version control system mapper | `gem` (Ruby) |
-| Creepy | Geolocation OSINT | git clone |
+| Tool | Description | Install | API Key |
+|------|-------------|---------|---------|
+| Brave Search | Web search API for OSINT recon (replaces Bing) | API-based (httpx) | **Required** (`brave.api_key`) |
+| XRay | Network reconnaissance (Go, archived) | git clone + go build | **Required** (`shodan.api_key`) |
+| GooDork | Google dorking (Python, not Go) | git clone | None |
+| dork-cli | Google dork query runner | git clone | None |
+| DataSploit | OSINT visualizer | git clone | Optional (Shodan) |
+| Snitch | Information gathering via dorks | git clone | None |
+| VcsMap | Version control system mapper | `gem` (Ruby) | None |
+| Creepy | Geolocation OSINT | git clone | None |
 
 ## Scan Profiles
 
