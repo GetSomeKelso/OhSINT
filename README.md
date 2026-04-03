@@ -96,25 +96,25 @@ src/
     ├── waymore.py           # Web archive URL extraction
     ├── maigret_tool.py      # Username search (3,000+ sites)
     ├── holehe_tool.py       # Email-to-platform registration check
-    ├── theharvester.py
-    ├── spiderfoot.py
-    ├── recon_ng.py
-    ├── metagoofil.py
-    ├── shodan_tool.py
-    ├── exiftool.py
-    ├── github_dorks.py
-    ├── crosslinked.py       # LinkedIn employee enum (passive)
-    ├── inspy.py             # EmpSpy + TechSpy
-    ├── linkedin2username.py # Authenticated LinkedIn scraping
-    ├── sherlock_tool.py     # Username search (400+ sites)
-    ├── linkedint.py         # LinkedIn deep-scraping (archived)
-    ├── xray.py
-    ├── goodork.py
-    ├── dork_cli.py
-    ├── datasploit.py
-    ├── snitch.py
-    ├── vcsmap.py
-    └── creepy.py
+    ├── theharvester.py      # Emails, subdomains, IPs from search engines
+    ├── spiderfoot.py        # Multi-source OSINT automation (200+ modules)
+    ├── recon_ng.py          # Modular recon framework (Metasploit-style)
+    ├── metagoofil.py        # Document metadata harvesting from domains
+    ├── shodan_tool.py       # Internet-connected device search (API)
+    ├── exiftool.py          # File metadata extraction (EXIF, GPS, author)
+    ├── github_dorks.py      # GitHub repo scanning for leaked secrets
+    ├── crosslinked.py       # LinkedIn employee enum via search engines (passive)
+    ├── inspy.py             # Employee enumeration + tech stack from job listings
+    ├── linkedin2username.py # Authenticated LinkedIn scraping via Selenium
+    ├── sherlock_tool.py     # Username search across 400+ sites
+    ├── linkedint.py         # LinkedIn profile deep-scraping (archived)
+    ├── xray.py              # Network recon from public networks (archived)
+    ├── goodork.py           # Google dorking from CLI (Python)
+    ├── dork_cli.py          # Google dork queries with rate limiting
+    ├── datasploit.py        # OSINT visualizer (Shodan, Censys, Clearbit)
+    ├── snitch.py            # Information gathering via dorks
+    ├── vcsmap.py            # Version control system mapper (Ruby)
+    └── creepy.py            # Geolocation OSINT from social media
 ```
 
 ## Setup
