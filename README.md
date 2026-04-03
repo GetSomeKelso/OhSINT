@@ -478,6 +478,10 @@ When connected via Claude Desktop, the following tools are available:
 | `osint_people_recon` | Full people recon pipeline (composite tool) |
 | `osint_xray` | Network recon with XRay |
 | `osint_datasploit` | OSINT visualizer |
+| `osint_snitch` | Information gathering via dorks |
+| `osint_vcsmap` | Version control system scanning |
+| `osint_creepy` | Geolocation OSINT from social media |
+| `osint_goodork` | Google dorking from CLI |
 | `osint_list_tools` | List tools and installation status |
 | `osint_install_check` | Verify tools and API keys |
 | `osint_report` | Generate report from existing results |
