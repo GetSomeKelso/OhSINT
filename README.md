@@ -123,8 +123,9 @@ src/
 
 - **Kali Linux** (bare metal, VM, or WSL2)
 - **Python 3.10+**
-- **Go** (for xray)
+- **Go 1.21+** (for subfinder, xray)
 - **Ruby** (for vcsmap)
+- **Node.js/npx** (for Claude Code MCP bridge via `mcp-remote`)
 
 ### 1. Install OhSINT
 
@@ -157,7 +158,7 @@ sudo apt install -y libimage-exiftool-perl golang-go ruby ruby-dev theharvester 
 #### Via pip (inside the venv)
 
 ```bash
-pip install shodan crosslinked sherlock-project
+pip install shodan crosslinked sherlock-project maigret holehe h8mail waymore
 ```
 
 #### From source (git clone)
@@ -212,6 +213,9 @@ git clone https://github.com/mdsecactivebreach/LinkedInt.git
 #### Go tools
 
 ```bash
+# subfinder — passive subdomain enumeration
+go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+
 # xray — network recon (archived, go install doesn't work)
 git clone https://github.com/evilsocket/xray.git ~/Tools/osint-deps/xray
 cd ~/Tools/osint-deps/xray && go build -o xray ./cmd/xray/
@@ -239,7 +243,7 @@ source .venv/bin/activate
 ohsint install-check
 ```
 
-All 20 tools should show ✓ (LinkedInt may show as non-functional — this is expected).
+All 28 tools should show ✓ (LinkedInt may show as non-functional — this is expected).
 
 ### 4. Configure API Keys
 
@@ -248,28 +252,41 @@ cp configs/api_keys.yaml.example configs/api_keys.yaml
 nano configs/api_keys.yaml
 ```
 
-#### Priority keys (start with these)
+#### Required keys
 
-| Key | Where to Get It | Tools Unlocked |
-|-----|----------------|----------------|
-| **Shodan** `api_key` | https://account.shodan.io | shodan, xray, recon_ng, datasploit |
-| **GitHub** `github_token` | https://github.com/settings/tokens | github_dorks, theharvester, recon_ng |
-| **Brave** `api_key` | https://brave.com/search/api/ | brave_search |
+| Config Key | Where to Get It | Tools Unlocked | Free Tier |
+|------------|----------------|----------------|-----------|
+| `shodan.api_key` | https://account.shodan.io | Shodan, XRay, recon-ng, DataSploit | $49 one-time |
+| `github_dorks.github_token` | https://github.com/settings/tokens | github-dorks, theHarvester, recon-ng | Free |
+| `brave.api_key` | https://brave.com/search/api/ | Brave Search | 2,000 req/mo free |
+| `virustotal.api_key` | https://www.virustotal.com/gui/my-apikey | VirusTotal | 4 req/min, 500/day |
+| `mcp_server.bearer_token` | Self-generated (see Security section) | MCP server auth | N/A |
 
 GitHub token scopes needed: `public_repo`, `read:org`, `read:user` (read-only, no write permissions).
 
-#### Optional keys (add later for better coverage)
+#### Required for active recon only
 
-| Key | Where to Get It |
-|-----|----------------|
-| Hunter `hunter_api` | https://hunter.io/api_key |
-| SecurityTrails `securitytrails_api` | https://securitytrails.com/app/account |
-| IntelX `intelx_api` | https://intelx.io/account?tab=developer |
-| VirusTotal `virustotal` | https://www.virustotal.com/gui/my-apikey |
-| Censys `censys_id` / `censys_secret` | https://search.censys.io/account/api |
-| IPinfo `ipinfo` | https://ipinfo.io/account/token |
+| Config Key | Where to Get It | Tools Unlocked | Notes |
+|------------|----------------|----------------|-------|
+| `linkedin.email` | Your LinkedIn account | linkedin2username, LinkedInt | Use a dedicated research account |
+| `linkedin.password` | Your LinkedIn account | linkedin2username, LinkedInt | Never use your personal account |
 
-Check key status:
+#### Optional keys (improve coverage)
+
+| Config Key | Where to Get It | Tools Improved |
+|------------|----------------|----------------|
+| `theharvester.hunter_api` | https://hunter.io/api_key | theHarvester email verification |
+| `theharvester.securitytrails_api` | https://securitytrails.com/app/account | theHarvester subdomain/DNS history |
+| `theharvester.intelx_api` | https://intelx.io/account?tab=developer | theHarvester leaked data search |
+| `spiderfoot.virustotal` | Same as above | SpiderFoot threat enrichment |
+| `spiderfoot.censys_id` / `censys_secret` | https://search.censys.io/account/api | SpiderFoot certificate analysis |
+| `spiderfoot.hunter` | Same as above | SpiderFoot email verification |
+| `spiderfoot.ipinfo` | https://ipinfo.io/account/token | SpiderFoot IP geolocation |
+| `hunter_io.api_key` | https://hunter.io/api_key | InSpy email verification |
+| `recon_ng.shodan_api` | Same as Shodan above | recon-ng Shodan modules |
+| `recon_ng.github_api` | Same as GitHub above | recon-ng GitHub modules |
+
+#### Check key status
 
 ```bash
 ohsint api-keys
@@ -367,6 +384,8 @@ Available flags:
 |------|---------|-------------|
 | `--host` | `127.0.0.1` | Bind address (`0.0.0.0` for Hyper-V) |
 | `--port` | `8055` | Listen port |
+| `--token` | None | Bearer token for auth (or set `OHSINT_MCP_TOKEN` env var) |
+| `--allowed-hosts` | RFC1918 | Comma-separated extra allowed hosts/CIDRs for DNS rebinding |
 
 #### Claude Desktop Config
 
@@ -421,17 +440,26 @@ Restart Claude Code for the tools to load.
 ## CLI Usage
 
 ```bash
-# Dry run first — see what would execute
-ohsint full-recon -t example.com -p passive --authorization --dry-run
+# Passive recon — no authorization needed (queries public sources only)
+ohsint full-recon -t example.com -p passive
+ohsint full-recon -t example.com -p infrastructure
+ohsint full-recon -t example.com -p threat-intel
+ohsint full-recon -t example.com -p social
 
-# Full passive recon
-ohsint full-recon -t example.com -p passive --authorization
-
-# Active recon (direct interaction with target)
+# Active recon — requires explicit authorization
 ohsint full-recon -t example.com -p active --authorization
+ohsint full-recon -t example.com -p full --authorization
 
-# Single tool
-ohsint tool -t example.com theharvester --authorization
+# Single tool (passive tools run without --authorization)
+ohsint tool -t example.com theharvester
+ohsint tool -t example.com subfinder
+ohsint tool -t user@example.com holehe
+
+# Single tool (active tools require --authorization)
+ohsint tool -t "Company Name" spiderfoot --authorization
+
+# Dry run — see what would execute without running
+ohsint full-recon -t example.com -p full --authorization --dry-run
 
 # List tools and installation status
 ohsint list-tools
@@ -494,7 +522,7 @@ When connected via Claude Desktop, the following tools are available:
 | `osint_install_check` | Verify tools and API keys |
 | `osint_report` | Generate report from existing results |
 
-All scan tools require `authorization_confirmed: true` to execute.
+**Passive tools** run without `authorization_confirmed`. **Active tools** (spiderfoot, recon-ng, linkedin2username, xray, linkedint) require `authorization_confirmed: true`.
 
 ## Reports
 
@@ -504,7 +532,7 @@ Reports are saved in three formats under `results/<target>/<timestamp>/`:
 - `report.md` — markdown summary with findings tables
 - `report.html` — styled dark-theme HTML report
 
-Findings are deduplicated across tools and normalized into types: email, subdomain, IP address, person, document, credential, technology, vulnerability, social profile, geolocation, metadata, DNS record, port/service, ASN, sensitive file, username.
+Findings are deduplicated across tools and normalized into types: email, subdomain, IP address, person, document, credential, technology, vulnerability, social profile, geolocation, metadata, DNS record, port/service, ASN, sensitive file, username, certificate, WHOIS record, breach, reputation.
 
 ## Security
 
