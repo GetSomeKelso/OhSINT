@@ -71,8 +71,12 @@ async def _run_tool_audited(
     authorization_confirmed: bool,
     **kwargs: Any,
 ) -> str:
-    """Run a tool with authorization check and audit logging."""
-    _require_auth(authorization_confirmed)
+    """Run a tool with authorization check and audit logging.
+
+    Passive tools skip the authorization gate automatically.
+    Active tools require authorization_confirmed=True.
+    """
+    _require_auth(authorization_confirmed, tool_name=tool_name)
     start = _time.time()
     try:
         result = await asyncio.to_thread(
@@ -134,12 +138,20 @@ def _get_orchestrator() -> Orchestrator:
     return _orchestrator
 
 
-def _require_auth(authorization_confirmed: bool) -> None:
-    """Raise if authorization not confirmed."""
+def _require_auth(authorization_confirmed: bool, tool_name: str = "") -> None:
+    """Raise if authorization not confirmed for active tools.
+
+    Passive tools (querying public sources) skip the authorization gate.
+    Active tools (interacting with target infrastructure) require explicit auth.
+    """
+    if tool_name:
+        tool = _get_orchestrator().get_tool(tool_name)
+        if tool and tool.is_passive:
+            return  # passive tools don't need authorization
     if not authorization_confirmed:
         raise ValueError(
-            "Authorization not confirmed. You must have WRITTEN AUTHORIZATION "
-            "from the target owner before running any scan."
+            "Authorization not confirmed. Active reconnaissance tools require "
+            "WRITTEN AUTHORIZATION from the target owner before execution."
         )
 
 
@@ -422,10 +434,11 @@ async def osint_report(
 @mcp.tool()
 async def osint_list_tools() -> str:
     """List all available OSINT tools and their installation status."""
-    lines = ["| Tool | Installed | Description |", "|------|-----------|-------------|"]
+    lines = ["| Tool | Type | Installed | Description |", "|------|------|-----------|-------------|"]
     for t in _get_orchestrator().all_tools():
         status = "Yes" if t.is_installed() else "No"
-        lines.append(f"| {t.name} | {status} | {t.description} |")
+        recon_type = "passive" if t.is_passive else "active"
+        lines.append(f"| {t.name} | {recon_type} | {status} | {t.description} |")
     return "\n".join(lines)
 
 

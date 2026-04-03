@@ -14,6 +14,7 @@ from src.tools.base import BaseTool
 
 @register_tool
 class LinkedInt(BaseTool):
+    is_passive = False  # authenticates to LinkedIn
     name = "linkedint"
     description = "LinkedIn profile deep-scraping (archived, may need patching)"
     binary_name = "python3"

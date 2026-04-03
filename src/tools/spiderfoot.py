@@ -35,6 +35,7 @@ _SF_TYPE_MAP = {
 
 @register_tool
 class SpiderFoot(BaseTool):
+    is_passive = False  # some modules actively probe target infrastructure
     name = "spiderfoot"
     description = "Multi-source OSINT automation (200+ modules)"
     binary_name = "spiderfoot"

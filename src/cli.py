@@ -39,8 +39,21 @@ AUTHORIZATION_BANNER = """
 """
 
 
-def require_authorization(ctx: click.Context) -> None:
-    """Gate every scan behind authorization confirmation."""
+def require_authorization(ctx: click.Context, tool_name: str = "") -> None:
+    """Gate active recon behind authorization confirmation.
+
+    Passive tools (querying public sources) run without authorization.
+    Active tools (interacting with target infrastructure) require --authorization
+    or interactive confirmation.
+    """
+    # Check if the tool is passive — if so, skip the gate
+    if tool_name:
+        config = ctx.obj.get("config") or Config()
+        orchestrator = Orchestrator(config=config)
+        t = orchestrator.get_tool(tool_name)
+        if t and t.is_passive:
+            return
+
     auth = ctx.params.get("authorization") or ctx.obj.get("authorization")
     if not auth:
         console.print(AUTHORIZATION_BANNER)
@@ -127,8 +140,14 @@ def cli(ctx, authorization, output, output_format, timeout, parallel, verbose, d
 )
 @click.pass_context
 def full_recon(ctx, target, profile):
-    """Run all tools in a scan profile against a target."""
-    require_authorization(ctx)
+    """Run all tools in a scan profile against a target.
+
+    Passive-only profiles (passive, metadata, social) run without authorization.
+    Profiles containing active tools (active, full) require --authorization.
+    """
+    # Only require auth if the profile includes active tools
+    if profile in ("active", "full"):
+        require_authorization(ctx)
     output_dir = _resolve_output_dir(ctx, target)
 
     orchestrator = Orchestrator(
@@ -157,7 +176,7 @@ def full_recon(ctx, target, profile):
 @click.pass_context
 def tool(ctx, target, tool_name):
     """Run a single OSINT tool by name."""
-    require_authorization(ctx)
+    require_authorization(ctx, tool_name=tool_name)
 
     if ctx.obj.get("dry_run"):
         orchestrator = Orchestrator(config=ctx.obj["config"])
@@ -194,14 +213,16 @@ def list_tools(ctx):
     orchestrator = Orchestrator(config=ctx.obj["config"])
     table = Table(title="OSINT Tools")
     table.add_column("Tool", style="cyan")
+    table.add_column("Type", style="dim")
     table.add_column("Installed", style="green")
     table.add_column("Binary", style="dim")
     table.add_column("Description")
 
     for t in orchestrator.all_tools():
         installed = "✓" if t.is_installed() else "✗"
+        recon_type = "[green]passive[/green]" if t.is_passive else "[yellow]active[/yellow]"
         style = "" if t.is_installed() else "red"
-        table.add_row(t.name, installed, t.binary_name, t.description, style=style)
+        table.add_row(t.name, recon_type, installed, t.binary_name, t.description, style=style)
 
     console.print(table)
 

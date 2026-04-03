@@ -89,6 +89,7 @@ class BaseTool(ABC):
     install_cmd: str = ""  # e.g. "pip install theHarvester"
     requires_api_keys: Tuple[str, ...] = ()  # immutable to avoid shared-state bugs
     accepted_target_types: Tuple[TargetType, ...] = ()  # what this tool wants (order = priority)
+    is_passive: bool = True  # passive tools query public sources only; active tools interact with target
 
     def __init__(self, config: Optional[Config] = None):
         self.config = config or Config()

@@ -39,6 +39,7 @@ MODULE_SETS = {
 
 @register_tool
 class ReconNg(BaseTool):
+    is_passive = False  # some modules actively probe target infrastructure
     name = "recon_ng"
     description = "Modular recon framework (Metasploit-style)"
     binary_name = "recon-ng"

@@ -17,6 +17,7 @@ logger = logging.getLogger("ohsint.tools.linkedin2username")
 
 @register_tool
 class LinkedIn2Username(BaseTool):
+    is_passive = False  # authenticates to LinkedIn via Selenium
     name = "linkedin2username"
     description = "Authenticated LinkedIn employee scraping — generates username format files"
     binary_name = "python3"

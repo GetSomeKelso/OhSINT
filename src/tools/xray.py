@@ -31,6 +31,7 @@ def _find_xray_dir() -> Path | None:
 
 @register_tool
 class XRay(BaseTool):
+    is_passive = False  # direct network interaction with target
     name = "xray"
     description = "Network recon and OSINT from public networks (archived, legacy)"
     binary_name = "xray"
