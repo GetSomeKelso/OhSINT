@@ -79,8 +79,8 @@ Keys can also be set via environment variables: `OSINT_<TOOL>_<KEY>` (uppercased
 | `social` | 8 tools — theHarvester, spiderfoot, creepy, crosslinked, inspy, sherlock, maigret, holehe | No |
 | `people` | 6 tools — crosslinked, inspy, sherlock, maigret, holehe, theHarvester | No |
 | `metadata` | 5 tools — metagoofil, exiftool, dork_cli, brave_search, inspy (techspy) | No |
-| `active` | 27 tools — inherits passive + spiderfoot (all), recon-ng, xray, linkedin2username | **Yes** |
-| `full` | 28 tools — inherits active + linkedint | **Yes** |
+| `active` | 5 tools — spiderfoot (all), recon-ng, xray, linkedin2username, linkedint | **Yes** |
+| `full` | 28 tools — all passive + all active combined | **Yes** |
 
 Profiles are defined in `configs/scan_profiles.yaml`.
 

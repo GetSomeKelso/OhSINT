@@ -54,7 +54,22 @@ passive:
         mode: "social"
 
 active:
-  description: "Active recon — direct interaction with target (requires explicit auth)"
+  description: "Active recon only — direct interaction with target (requires explicit auth)"
+  tools:
+    - spiderfoot:
+        use_case: "all"
+    - recon_ng:
+        modules: "active_set"
+    - xray:
+        mode: "full"
+    - linkedin2username:
+        depth: 5
+        sleep: 3
+    - linkedint:
+        mode: "full"
+
+full:
+  description: "All 28 tools — passive + active combined"
   inherits: passive
   tools:
     - spiderfoot:
@@ -66,11 +81,6 @@ active:
     - linkedin2username:
         depth: 5
         sleep: 3
-
-full:
-  description: "All tools, all modules — passive + active combined"
-  inherits: active
-  tools:
     - linkedint:
         mode: "full"
 
