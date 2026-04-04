@@ -1,7 +1,7 @@
-# OSINT Orchestrator — Scan Profiles
+# OhSINT — Scan Profiles
 
-passive:
-  description: "Passive recon only — zero interaction with target infrastructure"
+standard:
+  description: "Standard recon — core passive tools for quick results"
   tools:
     - subfinder:
         all_sources: true
@@ -19,8 +19,6 @@ passive:
         mode: "org_scan"
     - exiftool:
         mode: "post_metagoofil"
-    - spiderfoot:
-        use_case: "passive"
     - dork_cli:
         dorks: "ghdb_passive"
     - brave_search:
@@ -33,6 +31,27 @@ passive:
     - h8mail
     - waymore:
         mode: "U"
+
+passive:
+  description: "All 23 passive tools — comprehensive passive recon, zero target interaction"
+  inherits: standard
+  tools:
+    - spiderfoot:
+        use_case: "passive"
+    - sherlock:
+        batch: true
+        csv: true
+    - maigret
+    - holehe
+    - goodork
+    - datasploit:
+        mode: "full"
+    - snitch:
+        mode: "full"
+    - vcsmap:
+        mode: "full"
+    - creepy:
+        mode: "social"
 
 active:
   description: "Active recon — direct interaction with target (requires explicit auth)"
@@ -47,6 +66,38 @@ active:
     - linkedin2username:
         depth: 5
         sleep: 3
+
+full:
+  description: "All tools, all modules — passive + active combined"
+  inherits: active
+  tools:
+    - linkedint:
+        mode: "full"
+
+infrastructure:
+  description: "Passive domain and infrastructure intelligence — subdomains, certificates, WHOIS, DNS"
+  tools:
+    - subfinder:
+        all_sources: true
+    - crtsh:
+        wildcard: true
+    - whois
+    - theharvester:
+        sources: "google,bing,dnsdumpster"
+    - shodan:
+        mode: "search"
+    - brave_search:
+        queries: "subdomains"
+
+threat-intel:
+  description: "Threat intelligence and breach exposure — reputation, breaches, archived attack surface"
+  tools:
+    - virustotal
+    - h8mail
+    - waymore:
+        mode: "U"
+    - shodan:
+        mode: "search"
 
 metadata:
   description: "Document and metadata focused recon"
@@ -97,59 +148,3 @@ people:
     - holehe
     - theharvester:
         sources: "linkedin,google,bing"
-
-threat-intel:
-  description: "Threat intelligence and breach exposure — reputation, breaches, archived attack surface"
-  tools:
-    - virustotal
-    - h8mail
-    - waymore:
-        mode: "U"
-    - shodan:
-        mode: "search"
-
-infrastructure:
-  description: "Passive domain and infrastructure intelligence — subdomains, certificates, WHOIS, DNS"
-  tools:
-    - subfinder:
-        all_sources: true
-    - crtsh:
-        wildcard: true
-    - whois
-    - theharvester:
-        sources: "google,bing,dnsdumpster"
-    - shodan:
-        mode: "search"
-    - brave_search:
-        queries: "subdomains"
-
-full:
-  description: "All tools, all modules — comprehensive recon"
-  inherits: active
-  tools:
-    - subfinder:
-        all_sources: true
-    - crtsh:
-        wildcard: true
-    - whois
-    - virustotal
-    - h8mail
-    - waymore:
-        mode: "U"
-    - datasploit:
-        mode: "full"
-    - snitch:
-        mode: "full"
-    - vcsmap:
-        mode: "full"
-    - creepy:
-        mode: "social"
-    - crosslinked:
-        email_format: "{first}.{last}@{domain}"
-    - inspy:
-        mode: "both"
-    - sherlock:
-        batch: true
-        csv: true
-    - linkedint:
-        mode: "full"

@@ -72,14 +72,15 @@ Keys can also be set via environment variables: `OSINT_<TOOL>_<KEY>` (uppercased
 
 | Profile | Tools | Auth Required |
 |---------|-------|---------------|
-| `passive` | 16 tools — subfinder, crtsh, whois, theHarvester, shodan, metagoofil, exiftool, spiderfoot (passive), github_dorks, dork_cli, brave_search, crosslinked, inspy, virustotal, h8mail, waymore | No |
+| `standard` | 15 tools — core passive recon (default) | No |
+| `passive` | 23 tools — all passive tools, zero target interaction | No |
 | `infrastructure` | 6 tools — subfinder, crtsh, whois, theHarvester, shodan, brave_search | No |
 | `threat-intel` | 4 tools — virustotal, h8mail, waymore, shodan | No |
 | `social` | 8 tools — theHarvester, spiderfoot, creepy, crosslinked, inspy, sherlock, maigret, holehe | No |
 | `people` | 6 tools — crosslinked, inspy, sherlock, maigret, holehe, theHarvester | No |
 | `metadata` | 5 tools — metagoofil, exiftool, dork_cli, brave_search, inspy (techspy) | No |
-| `active` | 20 tools — inherits passive + spiderfoot (all), recon-ng, xray, linkedin2username | **Yes** |
-| `full` | 28+ tools — inherits active + all remaining tools | **Yes** |
+| `active` | 27 tools — inherits passive + spiderfoot (all), recon-ng, xray, linkedin2username | **Yes** |
+| `full` | 28 tools — inherits active + linkedint | **Yes** |
 
 Profiles are defined in `configs/scan_profiles.yaml`.
 
@@ -87,10 +88,11 @@ Profiles are defined in `configs/scan_profiles.yaml`.
 
 ```bash
 # Passive recon — no authorization needed
-ohsint full-recon -t example.com -p passive
-ohsint full-recon -t example.com -p infrastructure
-ohsint full-recon -t example.com -p threat-intel
-ohsint full-recon -t example.com -p social
+ohsint full-recon -t example.com                        # standard (default, 15 tools)
+ohsint full-recon -t example.com -p passive             # all 23 passive tools
+ohsint full-recon -t example.com -p infrastructure      # subdomains, certs, WHOIS
+ohsint full-recon -t example.com -p threat-intel        # reputation, breaches, archives
+ohsint full-recon -t example.com -p social              # people + social media
 
 # Active recon — requires explicit authorization
 ohsint full-recon -t example.com -p active --authorization

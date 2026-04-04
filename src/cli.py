@@ -134,8 +134,8 @@ def cli(ctx, authorization, output, output_format, timeout, parallel, verbose, d
 @click.option(
     "--profile",
     "-p",
-    type=click.Choice(["passive", "infrastructure", "threat-intel", "active", "full", "metadata", "social", "people"]),
-    default="passive",
+    type=click.Choice(["standard", "passive", "infrastructure", "threat-intel", "active", "full", "metadata", "social", "people"]),
+    default="standard",
     help="Scan profile.",
 )
 @click.pass_context
