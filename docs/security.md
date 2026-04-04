@@ -6,53 +6,105 @@ OhSINT has been audited against the OWASP MCP Top 10 and OWASP LLM Top 10. This 
 
 ## Bearer Token Authentication (MCP07)
 
-The MCP server supports bearer token auth to prevent unauthorized tool invocation.
+The MCP server supports bearer token auth to prevent unauthorized tool invocation. Without it, anyone on your network who can reach port 8055 can run any OSINT tool. Follow these steps in order.
 
-### Generate a token
+### Step 1: Generate a token on the Kali VM
+
+Open a terminal on your Kali VM and run:
 
 ```bash
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-### Configure on the server (Kali VM)
+This prints a random 32-character token like `xK9m2Fq_7bR3vLpN...`. **Copy this token** — you'll need it in the next two steps. Keep it private.
 
-Add to `configs/api_keys.yaml`:
+### Step 2: Configure the token on the Kali VM (server side)
+
+You have two options. Pick one:
+
+**Option A — Save it in the config file (recommended, persists across restarts):**
+
+```bash
+nano ~/Tools/OhSINT/configs/api_keys.yaml
+```
+
+Find or add this section at the top of the file:
 
 ```yaml
 mcp_server:
-  bearer_token: "your-token-here"
+  bearer_token: "PASTE_YOUR_TOKEN_HERE"
 ```
 
-Or pass directly:
+Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X` in nano).
+
+Now start the server — it will read the token from the config automatically:
 
 ```bash
-ohsint-mcp --host 0.0.0.0 --token your-token-here
-```
-
-Or set via environment variable:
-
-```bash
-export OHSINT_MCP_TOKEN="your-token-here"
+source ~/Tools/OhSINT/.venv/bin/activate
 ohsint-mcp --host 0.0.0.0
 ```
 
-### Configure on the client (Windows)
+You should see: `Bearer token authentication ENABLED` in the output.
 
-Set the environment variable before launching Claude:
+**Option B — Pass it directly on the command line (simpler, but you must type it every time):**
 
-```powershell
-# PowerShell — current session
-$env:OHSINT_MCP_TOKEN = "your-token-here"
-
-# Or permanently via System Properties > Environment Variables
+```bash
+source ~/Tools/OhSINT/.venv/bin/activate
+ohsint-mcp --host 0.0.0.0 --token PASTE_YOUR_TOKEN_HERE
 ```
 
-The `.mcp.json` passes it automatically via `--header "Authorization:Bearer ${OHSINT_MCP_TOKEN}"`.
+### Step 3: Configure the same token on Windows (client side)
 
-### Behavior
+Claude Desktop and Claude Code need the same token to connect. You must set it as an environment variable on Windows.
 
-- **Token configured:** All requests must include `Authorization: Bearer <token>`. Requests without it or with the wrong token get HTTP 401.
-- **No token configured:** Server starts with a WARNING log but runs unauthenticated (backward compatible).
+**For the current PowerShell session only (temporary):**
+
+```powershell
+$env:OHSINT_MCP_TOKEN = "PASTE_YOUR_TOKEN_HERE"
+```
+
+Then launch Claude Desktop or Claude Code from that same PowerShell window.
+
+**To set it permanently (survives reboots):**
+
+1. Press `Win + R`, type `sysdm.cpl`, press Enter
+2. Click the **Advanced** tab
+3. Click **Environment Variables**
+4. Under "User variables", click **New**
+5. Variable name: `OHSINT_MCP_TOKEN`
+6. Variable value: paste your token
+7. Click OK, OK, OK
+8. Restart Claude Desktop / Claude Code
+
+The `.mcp.json` file already includes `--header "Authorization:Bearer ${OHSINT_MCP_TOKEN}"` which automatically reads this environment variable and sends it with every request.
+
+### How to verify it's working
+
+**On the Kali VM**, you should see this line when the server starts:
+
+```
+INFO     Bearer token authentication ENABLED
+```
+
+**On Windows**, test the connection:
+
+```powershell
+# This should FAIL (no token):
+Invoke-WebRequest -Uri "http://<VM-IP>:8055/sse" -UseBasicParsing
+
+# This should SUCCEED (with token):
+Invoke-WebRequest -Uri "http://<VM-IP>:8055/sse" -UseBasicParsing -Headers @{Authorization="Bearer YOUR_TOKEN_HERE"}
+```
+
+### What happens without a token
+
+If you skip token setup, the server still works but logs a warning:
+
+```
+WARNING  No bearer token configured — MCP server is UNAUTHENTICATED
+```
+
+This means anyone on your network can invoke OhSINT tools. Fine for testing on an isolated lab network, but not recommended for any shared environment.
 
 ---
 
