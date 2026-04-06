@@ -23,6 +23,7 @@ Unified OSINT reconnaissance orchestrator that wraps 28 open-source intelligence
 | **[docs/tools.md](docs/tools.md)** | All 28 tools — descriptions, repo links, install, API keys, CLI usage |
 | **[docs/mcp-setup.md](docs/mcp-setup.md)** | Connecting to Claude — Hyper-V/VirtualBox/VMware, port forwarding, config |
 | **[docs/security.md](docs/security.md)** | OWASP MCP/LLM Top 10 hardening — auth, audit log, DNS rebinding, input validation |
+| **[CLAUDE.md](CLAUDE.md)** | How Claude should use these tools — chaining workflows, Burp integration, rules |
 
 ## Quick Start
 
@@ -155,6 +156,19 @@ ohsint-mcp --host 0.0.0.0 --token YOUR_TOKEN
 ```
 
 32 MCP tools available. Passive tools run freely; active tools require `authorization_confirmed: true`.
+
+## Burp Suite Integration
+
+OhSINT works alongside the Burp Suite MCP server for active validation of passive findings. OhSINT discovers the attack surface; Burp validates it. **Requires explicit authorization.**
+
+| OhSINT Finds | Burp Validates |
+|-------------|----------------|
+| Subdomains (subfinder, crtsh) | `send_http1_request` — probe for live responses |
+| Archived URLs (waymore) | `create_repeater_tab` — stage for manual testing |
+| Tech stack (InSpy) | `send_http1_request` — confirm via response headers |
+| Hosts (theHarvester) | `send_http1_request` — check security headers |
+
+See **[CLAUDE.md](CLAUDE.md)** for the full chaining workflow and rules.
 
 ## Docker
 
