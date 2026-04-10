@@ -1,6 +1,6 @@
 # MCP Server Setup — Connecting OhSINT to Claude
 
-OhSINT exposes all 28 tools as MCP tools via an SSE server (`ohsint-mcp`). This guide covers connecting it to Claude Desktop and Claude Code from a Windows host.
+OhSINT exposes all 43 tools as MCP tools via an SSE server (`ohsint-mcp`). This guide covers connecting it to Claude Desktop and Claude Code from a Windows host.
 
 ## VM Port Forwarding
 
@@ -201,7 +201,7 @@ Restart Claude Code for the tools to load.
 
 ## MCP Tools Available
 
-Once connected, 32 MCP tools are available. **Passive tools** run without `authorization_confirmed`. **Active tools** (spiderfoot, recon-ng, linkedin2username, xray, linkedint) require `authorization_confirmed: true`.
+Once connected, 40+ MCP tools are available. **Passive tools** run without `authorization_confirmed`. **Active tools** (spiderfoot, recon-ng, linkedin2username, xray, linkedint) require `authorization_confirmed: true`. **FCRA-gated tools** (whitepages_pro, beenverified) additionally require `fcra_purpose`.
 
 | MCP Tool | Description |
 |----------|-------------|
@@ -234,6 +234,14 @@ Once connected, 32 MCP tools are available. **Passive tools** run without `autho
 | `osint_vcsmap` | Version control system scanning |
 | `osint_creepy` | Geolocation OSINT from social media |
 | `osint_goodork` | Google dorking from CLI |
+| `osint_numverify` | Phone validation — carrier, line type, location |
+| `osint_twilio_lookup` | Phone CNAM caller ID, line type (~$0.005/call) |
+| `osint_censys` | Internet device/cert search + VoIP infra |
+| `osint_intelx` | Leaked data/dark web search (Intelligence X) |
+| `osint_hudson_rock` | Infostealer credential lookup (free) |
+| `osint_consumer_identity_links` | Generate lookup URLs for manual investigation |
+| `osint_whitepages_pro` | Reverse phone/identity (FCRA-gated) |
+| `osint_phone_recon` | Full phone recon pipeline (composite tool) |
 | `osint_list_tools` | List tools and installation status |
 | `osint_install_check` | Verify tools and API keys |
 | `osint_report` | Generate report from existing results |

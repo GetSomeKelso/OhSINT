@@ -1,6 +1,6 @@
 # OhSINT Tool Reference
 
-All 28 tools integrated into OhSINT, organized by category. Each entry includes the tool description, source repository, install method, API key requirements, and whether it runs passively or requires authorization.
+All 43 tools integrated into OhSINT, organized by category. Each entry includes the tool description, source repository, install method, API key requirements, and whether it runs passively or requires authorization.
 
 ---
 
@@ -56,6 +56,36 @@ All 28 tools integrated into OhSINT, organized by category. Each entry includes 
 | 26 | [Snitch](#snitch) | Passive | None |
 | 27 | [VcsMap](#vcsmap) | Passive | None |
 | 28 | [Creepy](#creepy) | Passive | None |
+
+## Phone & Identity — Tier 1 (Open API)
+
+| # | Tool | Type | API Key |
+|---|------|------|---------|
+| 29 | [NumVerify](#numverify) | Passive | **Required** |
+| 30 | [Twilio Lookup](#twilio-lookup) | Passive | **Required** |
+| 31 | [Censys](#censys) | Passive | **Required** |
+
+## Phone & Identity — Tier 2 (Threat Intel)
+
+| # | Tool | Type | API Key |
+|---|------|------|---------|
+| 32 | [Intelligence X](#intelligence-x) | Passive | **Required** |
+| 33 | [Hudson Rock](#hudson-rock) | Passive | None (free basic) |
+| 34 | [SpyCloud](#spycloud) | Passive | **Required** (enterprise) |
+
+## Phone & Identity — Tier 3 (Commercial, FCRA-Gated)
+
+| # | Tool | Type | API Key |
+|---|------|------|---------|
+| 35 | [Consumer Identity Reference](#consumer-identity-reference) | Passive | None |
+| 36 | [Whitepages Pro](#whitepages-pro) | **FCRA** | **Required** |
+| 37 | [BeenVerified](#beenverified) | **FCRA** | **Required** |
+| 38 | [LexisNexis](#lexisnexis) | **FCRA stub** | Contract |
+| 39 | [TLO](#tlo) | **FCRA stub** | Contract |
+| 40 | [CLEAR](#clear) | **FCRA stub** | Contract |
+| 41 | [Tracers](#tracers) | **FCRA stub** | Contract |
+| 42 | [IDI](#idi) | **FCRA stub** | Contract |
+| 43 | [SmartMove](#smartmove) | **FCRA stub** | Contract |
 
 ---
 
@@ -474,3 +504,199 @@ Geolocation OSINT — extracts location data from social media profiles and post
 - **OhSINT wrapper:** `src/tools/creepy.py`
 - **MCP tool:** `osint_creepy`
 - **Profiles:** social, full
+
+---
+
+### NumVerify
+
+Phone number validation — carrier, line type, location, country via NumVerify API.
+
+- **Website:** [numverify.com](https://numverify.com/)
+- **Install:** API-based (uses httpx)
+- **API Keys:** **Required** — `numverify.api_key` (free: 100 req/month)
+- **Type:** Passive
+- **OhSINT wrapper:** `src/tools/numverify.py`
+- **MCP tool:** `osint_numverify`
+- **Profiles:** phone, identity
+
+---
+
+### Twilio Lookup
+
+Phone carrier, CNAM (caller ID name), and line type intelligence via Twilio Lookup API v2.
+
+- **Website:** [twilio.com](https://www.twilio.com/docs/lookup)
+- **Install:** API-based (uses httpx)
+- **API Keys:** **Required** — `twilio.account_sid`, `twilio.auth_token` (~$0.005/lookup)
+- **Type:** Passive
+- **Cost:** ~$0.005 per lookup. Logged to audit trail.
+- **OhSINT wrapper:** `src/tools/twilio_lookup.py`
+- **MCP tool:** `osint_twilio_lookup`
+- **Profiles:** phone, identity
+
+---
+
+### Censys
+
+Internet device and certificate search — hosts, services, TLS certs. Also searches for SIP/VoIP infrastructure associated with phone numbers.
+
+- **Website:** [search.censys.io](https://search.censys.io/)
+- **Install:** API-based (uses httpx)
+- **API Keys:** **Required** — `censys.api_id`, `censys.api_secret` (free: 250 req/month)
+- **Type:** Passive
+- **OhSINT wrapper:** `src/tools/censys.py`
+- **MCP tool:** `osint_censys`
+- **Profiles:** phone, infrastructure
+
+---
+
+### Intelligence X
+
+Search leaked data, dark web, paste sites, and breach archives for phone numbers, emails, or domains.
+
+- **Website:** [intelx.io](https://intelx.io/)
+- **Install:** API-based (uses httpx)
+- **API Keys:** **Required** — `intelx.api_key` (free: ~10 searches/day)
+- **Type:** Passive
+- **Rate limit:** Free tier is heavily limited. 429 errors handled gracefully.
+- **OhSINT wrapper:** `src/tools/intelx.py`
+- **MCP tool:** `osint_intelx`
+- **Profiles:** phone, identity, threat-intel
+
+---
+
+### Hudson Rock
+
+Infostealer credential lookup — maps phones/emails to compromised machines from Raccoon, Redline, Vidar, and similar infostealer families.
+
+- **Website:** [hudsonrock.com](https://www.hudsonrock.com/)
+- **Install:** API-based (uses httpx)
+- **API Keys:** None for basic tier; optional `hudson_rock.api_key` for Pro
+- **Type:** Passive
+- **OhSINT wrapper:** `src/tools/hudson_rock.py`
+- **MCP tool:** `osint_hudson_rock`
+- **Profiles:** phone, identity, threat-intel
+
+---
+
+### SpyCloud
+
+Enterprise botnet log and recaptured credential search. Requires security firm verification for access.
+
+- **Website:** [spycloud.com](https://spycloud.com/)
+- **Install:** API-based (uses httpx)
+- **API Keys:** **Required** — `spycloud.api_key` (enterprise only). Must also set `spycloud.enabled: true`
+- **Type:** Passive (gated behind config flag)
+- **OhSINT wrapper:** `src/tools/spycloud.py`
+- **MCP tool:** N/A (disabled by default)
+- **Profiles:** identity (when enabled)
+
+---
+
+### Consumer Identity Reference
+
+Generates lookup URLs for manual investigation on consumer identity portals (Spokeo, BeenVerified, Whitepages, TruePeopleSearch, etc.). No API calls, no scraping — just builds URLs.
+
+- **Install:** No install needed
+- **API Keys:** None
+- **Type:** Passive
+- **OhSINT wrapper:** `src/tools/consumer_identity_reference.py`
+- **MCP tool:** `osint_consumer_identity_links`
+- **Profiles:** phone, identity
+
+---
+
+### Whitepages Pro
+
+Reverse phone and identity lookup — owner, address, carrier data via Whitepages Pro API. **FCRA-gated.**
+
+- **Website:** [pro.whitepages.com](https://pro.whitepages.com/)
+- **Install:** API-based (uses httpx)
+- **API Keys:** **Required** — `whitepages_pro.api_key` (subscription required)
+- **Type:** **FCRA-gated** — requires `--authorization` AND `--fcra-permissible-purpose`
+- **Cost:** ~$0.10/lookup
+- **OhSINT wrapper:** `src/tools/whitepages_pro.py`
+- **MCP tool:** `osint_whitepages_pro`
+- **Profiles:** commercial_identity
+
+---
+
+### BeenVerified
+
+Identity resolution — phone/email/name lookup via BeenVerified Business API. **FCRA-gated.**
+
+- **Website:** [beenverified.com/business](https://www.beenverified.com/business/)
+- **Install:** API-based (uses httpx)
+- **API Keys:** **Required** — `beenverified.api_key` (business subscription required)
+- **Type:** **FCRA-gated** — requires `--authorization` AND `--fcra-permissible-purpose`
+- **Cost:** ~$0.15/lookup
+- **OhSINT wrapper:** `src/tools/beenverified.py`
+- **MCP tool:** N/A (use via commercial_identity profile)
+- **Profiles:** commercial_identity
+
+---
+
+### LexisNexis
+
+LexisNexis Accurint identity resolution. **Placeholder stub** — requires PI license or law enforcement credentials.
+
+- **Website:** [risk.lexisnexis.com/products/accurint](https://risk.lexisnexis.com/products/accurint)
+- **API Keys:** Contract-specific — `lexisnexis.api_key`, `lexisnexis.api_endpoint`
+- **Type:** **FCRA-gated stub** — disabled by default
+- **OhSINT wrapper:** `src/tools/lexisnexis.py`
+
+---
+
+### TLO
+
+TLO/TransUnion investigative data. **Placeholder stub** — requires security firm verification.
+
+- **Website:** [tlo.com](https://www.tlo.com/)
+- **API Keys:** Contract-specific — `tlo.api_key`, `tlo.api_endpoint`
+- **Type:** **FCRA-gated stub** — disabled by default
+- **OhSINT wrapper:** `src/tools/tlo.py`
+
+---
+
+### CLEAR
+
+Thomson Reuters CLEAR investigative platform. **Placeholder stub** — requires LE or licensed investigator credentials.
+
+- **Website:** [legal.thomsonreuters.com](https://legal.thomsonreuters.com/en/products/clear-investigation-software)
+- **API Keys:** Contract-specific — `clear.api_key`, `clear.api_endpoint`
+- **Type:** **FCRA-gated stub** — disabled by default
+- **OhSINT wrapper:** `src/tools/clear_tool.py`
+
+---
+
+### Tracers
+
+Tracers investigative data platform. **Placeholder stub** — requires licensed investigator credentials.
+
+- **Website:** [tracers.com](https://www.tracers.com/)
+- **API Keys:** Contract-specific — `tracers.api_key`
+- **Type:** **FCRA-gated stub** — disabled by default
+- **OhSINT wrapper:** `src/tools/tracers.py`
+
+---
+
+### IDI
+
+IDI/idiCORE identity resolution platform. **Placeholder stub** — requires credentialed access.
+
+- **Website:** [ididata.com](https://www.ididata.com/)
+- **API Keys:** Contract-specific — `idi.api_key`
+- **Type:** **FCRA-gated stub** — disabled by default
+- **OhSINT wrapper:** `src/tools/idi.py`
+
+---
+
+### SmartMove
+
+TransUnion SmartMove identity/background reports. **Placeholder stub** — FCRA-gated, ~$25-45 per report.
+
+- **Website:** [mysmartmove.com](https://www.mysmartmove.com/)
+- **API Keys:** Contract-specific — `smartmove.api_key`
+- **Type:** **FCRA-gated stub** — disabled by default
+- **Cost:** ~$25-45 per report
+- **OhSINT wrapper:** `src/tools/smartmove.py`

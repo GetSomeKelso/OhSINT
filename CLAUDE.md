@@ -2,13 +2,13 @@
 
 ## What This Is
 
-OhSINT is a unified OSINT reconnaissance orchestrator with 28 tools behind a CLI (`ohsint`) and MCP server (`ohsint-mcp`). It runs on a Kali Linux VM and connects to Claude Desktop/Code on a Windows host via SSE.
+OhSINT is a unified OSINT reconnaissance orchestrator with 43 tools behind a CLI (`ohsint`) and MCP server (`ohsint-mcp`). It runs on a Kali Linux VM and connects to Claude Desktop/Code on a Windows host via SSE.
 
 The operator (SheriffBart) is an IT Director / Security Architect / Penetration Tester who uses this tool for authorized engagements.
 
 ## Docs
 
-- **[docs/tools.md](docs/tools.md)** — All 28 tools with repo links, install, API keys, CLI usage
+- **[docs/tools.md](docs/tools.md)** — All 43 tools with repo links, install, API keys, CLI usage
 - **[docs/mcp-setup.md](docs/mcp-setup.md)** — Connecting Claude to the Kali VM
 - **[docs/security.md](docs/security.md)** — OWASP hardening, bearer token auth, audit log
 
@@ -16,8 +16,9 @@ The operator (SheriffBart) is an IT Director / Security Architect / Penetration 
 
 ### Authorization
 
-- **Passive tools (23)** run without authorization. They query public data sources and never touch the target.
+- **Passive tools (38)** run without authorization. They query public data sources and never touch the target.
 - **Active tools (5)** require explicit authorization before execution: spiderfoot, recon-ng, xray, linkedin2username, linkedint.
+- **FCRA-gated tools (9)** require BOTH `--authorization` AND `--fcra-permissible-purpose <engagement-id>`. These access commercial identity resolution services governed by the Fair Credit Reporting Act: whitepages_pro, beenverified, lexisnexis, tlo, clear, tracers, idi, smartmove.
 - Never run an active tool without the user confirming they have written authorization.
 - When in doubt, ask. Do not assume authorization carries over from a previous request.
 
@@ -69,6 +70,29 @@ target domain/IP ──► virustotal (reputation, DNS, categories)
                      shodan (indexed services, banners)
                      waymore (archived attack surface)
 emails found ──► h8mail (breach exposure)
+```
+
+### Phone / Identity Pipeline
+
+```
+phone number ──► numverify (validate, carrier, line type)
+               ► twilio_lookup (CNAM caller ID, $0.005/call)
+               ► intelx (leaked data search)
+               ► hudson_rock (infostealer check)
+               ► consumer_identity_reference (manual lookup URLs)
+
+email found ──► holehe (platform registration check)
+              ► h8mail (breach exposure)
+              ► intelx (dark web search)
+              ► hudson_rock (infostealer check)
+```
+
+### FCRA-Gated Identity Pipeline (requires --fcra-permissible-purpose)
+
+```
+phone/email ──► whitepages_pro (owner, address, carrier)
+              ► beenverified (full identity resolution)
+              ► [lexisnexis, tlo, clear, tracers, idi, smartmove — stubs, configure when contracted]
 ```
 
 ## Burp Suite Integration
@@ -125,12 +149,15 @@ When the user asks to "investigate", "validate", or "deep dive" on findings from
 | `standard` | 15 | No | Default quick scan |
 | `passive` | 23 | No | Comprehensive passive — all passive tools |
 | `active` | 5 | **Yes** | Active tools only |
-| `full` | 28 | **Yes** | Everything — passive + active |
+| `full` | 43 | **Yes** | Everything — passive + active |
 | `infrastructure` | 6 | No | Domain-focused — subdomains, certs, WHOIS |
 | `threat-intel` | 4 | No | Reputation, breaches, archives |
 | `social` | 8 | No | People + social media |
 | `people` | 6 | No | LinkedIn enum, username search |
 | `metadata` | 5 | No | Documents + file metadata |
+| `phone` | 5 | No | Phone number recon — cheapest first |
+| `identity` | 7 | No | Phone + breach + platform check |
+| `commercial_identity` | 2 | **Yes + FCRA** | FCRA-gated commercial identity |
 
 ## API Keys
 

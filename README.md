@@ -158,7 +158,7 @@ ohsint-mcp --host 0.0.0.0 --token YOUR_TOKEN
 }
 ```
 
-32 MCP tools available. Passive tools run freely; active tools require `authorization_confirmed: true`.
+40+ MCP tools available. Passive tools run freely; active tools require `authorization_confirmed: true`.
 
 ## Burp Suite Integration
 

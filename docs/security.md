@@ -191,10 +191,38 @@ All targets are validated in `validate_target()` before execution. Rejected patt
 
 Tools are classified as passive or active via `BaseTool.is_passive`:
 
-- **Passive tools** (23 of 28) query public data sources and run without authorization
-- **Active tools** (5 of 28) interact with target infrastructure or authenticate to third-party services and require `--authorization` or `authorization_confirmed: true`
+- **Passive tools** (38 of 43) query public data sources and run without authorization
+- **Active tools** (5 of 43) interact with target infrastructure or authenticate to third-party services and require `--authorization` or `authorization_confirmed: true`
+- **FCRA-gated tools** (9 of 43) access commercial identity resolution services governed by the Fair Credit Reporting Act and require BOTH `--authorization` AND `--fcra-permissible-purpose <engagement-id>`
 
 **Active tools:** spiderfoot, recon-ng, linkedin2username, xray, linkedint
+
+**FCRA-gated tools:** whitepages_pro, beenverified, lexisnexis, tlo, clear, tracers, idi, smartmove
+
+---
+
+## FCRA Permissible Purpose Gating
+
+Commercial identity resolution tools (Whitepages Pro, BeenVerified, LexisNexis, TLO, CLEAR, Tracers, IDI, SmartMove) are governed by the Fair Credit Reporting Act. OhSINT enforces this with three-layer gating:
+
+### Layer 1: CLI flag
+```bash
+ohsint tool -t "+15558675309" whitepages_pro --authorization --fcra-permissible-purpose ENG-2026-001
+```
+
+Without `--fcra-permissible-purpose`, FCRA tools refuse to run with a clear legal explanation.
+
+### Layer 2: MCP server
+`_run_tool_audited()` checks `tool.requires_fcra` and the `fcra_purpose` kwarg. Missing purpose = ValueError.
+
+### Layer 3: Tool-level
+Each FCRA tool's `run()` method can also check internally (belt-and-suspenders).
+
+### Audit trail
+The engagement ID is logged to `results/audit.jsonl` with every FCRA tool invocation for legal traceability.
+
+### Important
+FCRA compliance is the **operator's responsibility**, not OhSINT's. The gating flag exists to enforce workflow discipline and audit logging, not to verify legal compliance. Consult legal counsel before using commercial identity resolution services.
 
 ---
 
