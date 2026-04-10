@@ -84,6 +84,32 @@ full:
     - linkedint:
         mode: "full"
 
+phone:
+  description: "Phone number recon — validation, carrier, threat intel (cheapest first)"
+  tools:
+    - numverify
+    - twilio_lookup
+    - intelx
+    - hudson_rock
+    - consumer_identity_reference
+
+identity:
+  description: "Identity recon — threat intel, phone, breach, platform check"
+  tools:
+    - intelx
+    - hudson_rock
+    - numverify
+    - twilio_lookup
+    - consumer_identity_reference
+    - holehe
+    - h8mail
+
+commercial_identity:
+  description: "FCRA-gated commercial identity — requires --authorization AND --fcra-permissible-purpose"
+  tools:
+    - whitepages_pro
+    - beenverified
+
 infrastructure:
   description: "Passive domain and infrastructure intelligence — subdomains, certificates, WHOIS, DNS"
   tools:

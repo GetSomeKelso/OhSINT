@@ -26,6 +26,27 @@ from src.tools.waymore import Waymore
 from src.tools.maigret_tool import MaigretTool
 from src.tools.holehe_tool import HoleheTool
 
+# Phone & Identity — Tier 1 (Open API)
+from src.tools.numverify import NumVerifyTool
+from src.tools.twilio_lookup import TwilioLookupTool
+from src.tools.censys import CensysTool
+
+# Phone & Identity — Tier 2 (Threat Intel)
+from src.tools.intelx import IntelXTool
+from src.tools.hudson_rock import HudsonRockTool
+from src.tools.spycloud import SpyCloudTool
+
+# Phone & Identity — Tier 3 (Commercial, FCRA-gated)
+from src.tools.consumer_identity_reference import ConsumerIdentityReference
+from src.tools.whitepages_pro import WhitepagesProTool
+from src.tools.beenverified import BeenVerifiedTool
+from src.tools.lexisnexis import LexisNexisTool
+from src.tools.tlo import TloTool
+from src.tools.clear_tool import ClearTool
+from src.tools.tracers import TracersTool
+from src.tools.idi import IdiTool
+from src.tools.smartmove import SmartMoveTool
+
 # LinkedIn / People Recon
 from src.tools.crosslinked import CrossLinked
 from src.tools.inspy import InSpy
@@ -64,6 +85,24 @@ __all__ = [
     # Expanded identity OSINT
     "MaigretTool",
     "HoleheTool",
+    # Phone & Identity — Tier 1
+    "NumVerifyTool",
+    "TwilioLookupTool",
+    "CensysTool",
+    # Phone & Identity — Tier 2
+    "IntelXTool",
+    "HudsonRockTool",
+    "SpyCloudTool",
+    # Phone & Identity — Tier 3 (FCRA-gated)
+    "ConsumerIdentityReference",
+    "WhitepagesProTool",
+    "BeenVerifiedTool",
+    "LexisNexisTool",
+    "TloTool",
+    "ClearTool",
+    "TracersTool",
+    "IdiTool",
+    "SmartMoveTool",
     # LinkedIn / People Recon
     "CrossLinked",
     "InSpy",

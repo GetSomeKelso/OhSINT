@@ -477,6 +477,112 @@ async def osint_waymore(
 
 
 # ---------------------------------------------------------------------------
+# Phone & Identity — Tier 1 (Open API)
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_numverify(
+    phone: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Phone number validation — carrier, line type, location, country (NumVerify API, free tier)."""
+    return await _run_tool_audited("numverify", phone, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_twilio_lookup(
+    phone: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Phone carrier, CNAM (caller ID name), line type intelligence (Twilio API, ~$0.005/call)."""
+    return await _run_tool_audited("twilio_lookup", phone, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_censys(
+    target: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Internet device and certificate search — hosts, services, TLS certs (Censys API, free tier)."""
+    return await _run_tool_audited("censys", target, authorization_confirmed)
+
+
+# ---------------------------------------------------------------------------
+# Phone & Identity — Tier 2 (Threat Intel)
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_intelx(
+    target: str,
+    max_results: int = 100,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Search leaked data and dark web — breaches, paste sites, darknet dumps (Intelligence X, free tier)."""
+    return await _run_tool_audited(
+        "intelx", target, authorization_confirmed, max_results=max_results,
+    )
+
+
+@mcp.tool()
+async def osint_hudson_rock(
+    target: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Infostealer credential lookup — Raccoon, Redline, Vidar compromised machine data (Hudson Rock, free)."""
+    return await _run_tool_audited("hudson_rock", target, authorization_confirmed)
+
+
+# ---------------------------------------------------------------------------
+# Phone & Identity — Tier 3 (Consumer/Commercial)
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_consumer_identity_links(
+    target: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Generate lookup URLs for manual investigation on consumer identity portals (Spokeo, BeenVerified, etc.)."""
+    return await _run_tool_audited("consumer_identity_reference", target, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_whitepages_pro(
+    phone: str,
+    fcra_purpose: str = "",
+    authorization_confirmed: bool = False,
+) -> str:
+    """Reverse phone/identity lookup — owner, address, carrier (Whitepages Pro, FCRA-gated)."""
+    return await _run_tool_audited(
+        "whitepages_pro", phone, authorization_confirmed, fcra_purpose=fcra_purpose,
+    )
+
+
+@mcp.tool()
+async def osint_phone_recon(
+    phone: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Run the phone number recon pipeline — cheapest tools first.
+
+    Pipeline: NumVerify → Twilio → IntelX → Hudson Rock → consumer identity URLs.
+    """
+    _require_auth(authorization_confirmed, tool_name="numverify")
+    start = _time.time()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_target = phone.replace("+", "").replace(" ", "")
+    output_dir = DEFAULT_RESULTS_DIR / safe_target / timestamp
+
+    try:
+        orchestrator = Orchestrator(config=_get_config(), timeout=300, verbose=True)
+        report = await asyncio.to_thread(
+            orchestrator.run_profile, phone, "phone", output_dir,
+        )
+        save_report(report, output_dir, "all")
+        _audit_log("phone_recon", phone, True, True, _time.time() - start)
+        return report.to_markdown()
+    except Exception as exc:
+        _audit_log("phone_recon", phone, True, False, _time.time() - start, str(exc))
+        raise
+
+
+# ---------------------------------------------------------------------------
 # Expanded identity OSINT
 # ---------------------------------------------------------------------------
 @mcp.tool()

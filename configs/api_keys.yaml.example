@@ -54,3 +54,69 @@ linkedin:
 hunter_io:
   # Optional — improves InSpy email verification
   api_key: ""
+
+# ── Phone & Identity — Tier 1 (Open API) ──
+
+numverify:
+  # https://numverify.com/ — free: 100 req/month
+  api_key: ""
+
+twilio:
+  # https://console.twilio.com/ — ~$0.005 per lookup
+  account_sid: ""
+  auth_token: ""
+
+censys:
+  # https://search.censys.io/account/api — free: 250 req/month
+  api_id: ""
+  api_secret: ""
+
+# ── Phone & Identity — Tier 2 (Threat Intel) ──
+
+intelx:
+  # https://intelx.io/account?tab=developer — free tier available
+  api_key: ""
+
+hudson_rock:
+  # https://www.hudsonrock.com/ — free basic tier, optional Pro key
+  api_key: ""
+
+spycloud:
+  # Enterprise only — requires security firm verification
+  # Set enabled: true when you have an active SpyCloud account
+  enabled: false
+  api_key: ""
+  api_endpoint: ""
+
+# ── Phone & Identity — Tier 3 (Commercial, FCRA-gated) ──
+
+whitepages_pro:
+  # https://pro.whitepages.com — requires subscription + FCRA purpose
+  api_key: ""
+
+beenverified:
+  # https://www.beenverified.com/business/ — requires business subscription + FCRA purpose
+  api_key: ""
+  api_endpoint: ""
+
+# Placeholder stubs — configure when you have vendor contracts
+lexisnexis:
+  api_key: ""
+  api_endpoint: ""
+
+tlo:
+  api_key: ""
+  api_endpoint: ""
+
+clear:
+  api_key: ""
+  api_endpoint: ""
+
+tracers:
+  api_key: ""
+
+idi:
+  api_key: ""
+
+smartmove:
+  api_key: ""

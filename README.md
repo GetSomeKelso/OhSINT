@@ -1,6 +1,6 @@
 # OhSINT
 
-Unified OSINT reconnaissance orchestrator that wraps 28 open-source intelligence tools behind a single CLI and MCP server. Runs on a Kali Linux VM and connects to Claude Desktop or Claude Code on a Windows host via SSE.
+Unified OSINT reconnaissance orchestrator that wraps 43 open-source intelligence tools behind a single CLI and MCP server. Runs on a Kali Linux VM and connects to Claude Desktop or Claude Code on a Windows host via SSE.
 
 ```
 ┌─────────────────────┐     SSE / mcp-remote      ┌─────────────────────────┐
@@ -12,7 +12,7 @@ Unified OSINT reconnaissance orchestrator that wraps 28 open-source intelligence
 │                     │                            │    └── DNS rebinding     │
 └─────────────────────┘                            │                         │
                                                    │  ohsint CLI             │
-                                                   │    └── 28 tool wrappers │
+                                                   │    └── 43 tool wrappers │
                                                    └─────────────────────────┘
 ```
 
@@ -20,7 +20,7 @@ Unified OSINT reconnaissance orchestrator that wraps 28 open-source intelligence
 
 | Doc | What's In It |
 |-----|-------------|
-| **[docs/tools.md](docs/tools.md)** | All 28 tools — descriptions, repo links, install, API keys, CLI usage |
+| **[docs/tools.md](docs/tools.md)** | All 43 tools — descriptions, repo links, install, API keys, CLI usage |
 | **[docs/mcp-setup.md](docs/mcp-setup.md)** | Connecting to Claude — Hyper-V/VirtualBox/VMware, port forwarding, config |
 | **[docs/security.md](docs/security.md)** | OWASP MCP/LLM Top 10 hardening — auth, audit log, DNS rebinding, input validation |
 | **[CLAUDE.md](CLAUDE.md)** | How Claude should use these tools — chaining workflows, Burp integration, rules |
@@ -80,8 +80,11 @@ Keys can also be set via environment variables: `OSINT_<TOOL>_<KEY>` (uppercased
 | `social` | 8 tools — theHarvester, spiderfoot, creepy, crosslinked, inspy, sherlock, maigret, holehe | No |
 | `people` | 6 tools — crosslinked, inspy, sherlock, maigret, holehe, theHarvester | No |
 | `metadata` | 5 tools — metagoofil, exiftool, dork_cli, brave_search, inspy (techspy) | No |
+| `phone` | 5 tools — numverify, twilio, intelx, hudson_rock, consumer ID links | No |
+| `identity` | 7 tools — intelx, hudson_rock, numverify, twilio, consumer ID, holehe, h8mail | No |
+| `commercial_identity` | 2 tools — whitepages_pro, beenverified | **Yes + FCRA** |
 | `active` | 5 tools — spiderfoot (all), recon-ng, xray, linkedin2username, linkedint | **Yes** |
-| `full` | 28 tools — all passive + all active combined | **Yes** |
+| `full` | 43 tools — all passive + all active combined | **Yes** |
 
 Profiles are defined in `configs/scan_profiles.yaml`.
 
