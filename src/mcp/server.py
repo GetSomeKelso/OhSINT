@@ -44,6 +44,8 @@ def _audit_log(
     success: bool,
     execution_time: float,
     error: str = "",
+    estimated_cost: float = 0.0,
+    fcra_purpose: str = "",
 ) -> None:
     """Append a JSON-lines audit record (MCP08)."""
     record = {
@@ -57,6 +59,10 @@ def _audit_log(
     }
     if error:
         record["error"] = error[:500]
+    if estimated_cost > 0:
+        record["estimated_cost_usd"] = round(estimated_cost, 4)
+    if fcra_purpose:
+        record["fcra_purpose"] = fcra_purpose
     try:
         AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
@@ -71,12 +77,26 @@ async def _run_tool_audited(
     authorization_confirmed: bool,
     **kwargs: Any,
 ) -> str:
-    """Run a tool with authorization check and audit logging.
+    """Run a tool with authorization check, FCRA check, and audit logging.
 
     Passive tools skip the authorization gate automatically.
     Active tools require authorization_confirmed=True.
+    FCRA-gated tools require fcra_purpose kwarg.
     """
     _require_auth(authorization_confirmed, tool_name=tool_name)
+
+    # FCRA check
+    tool = _get_orchestrator().get_tool(tool_name)
+    fcra_purpose = kwargs.pop("fcra_purpose", "")
+    if tool and getattr(tool, "requires_fcra", False) and not fcra_purpose:
+        raise ValueError(
+            f"{tool_name} requires FCRA permissible purpose documentation. "
+            "This tool accesses commercial identity resolution services governed by the "
+            "Fair Credit Reporting Act. Pass fcra_purpose=<engagement-id>."
+        )
+
+    estimated_cost = getattr(tool, "estimated_cost_per_query", 0.0) if tool else 0.0
+
     start = _time.time()
     try:
         result = await asyncio.to_thread(
@@ -87,12 +107,14 @@ async def _run_tool_audited(
             tool_name, target, authorization_confirmed,
             success=not result.errors, execution_time=elapsed,
             error=result.errors[0] if result.errors else "",
+            estimated_cost=estimated_cost, fcra_purpose=fcra_purpose,
         )
         return _format_result(result)
     except Exception as exc:
         _audit_log(
             tool_name, target, authorization_confirmed,
             success=False, execution_time=_time.time() - start, error=str(exc),
+            estimated_cost=estimated_cost, fcra_purpose=fcra_purpose,
         )
         raise
 

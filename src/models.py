@@ -35,6 +35,8 @@ class IntelType(str, Enum):
     WHOIS_RECORD = "whois_record"
     BREACH = "breach"
     REPUTATION = "reputation"
+    PHONE_INFO = "phone_info"
+    INFOSTEALER = "infostealer"
 
 
 class ToolResult(BaseModel):

@@ -71,6 +71,32 @@ def require_authorization(ctx: click.Context, tool_name: str = "") -> None:
         ctx.obj["authorization"] = True
 
 
+FCRA_BANNER = """
+[bold red]╔══════════════════════════════════════════════════════════════╗
+║  FCRA PERMISSIBLE PURPOSE REQUIRED                           ║
+║                                                              ║
+║  This tool accesses commercial identity resolution services  ║
+║  governed by the Fair Credit Reporting Act.                  ║
+║                                                              ║
+║  Re-run with: --fcra-permissible-purpose <engagement-id>     ║
+╚══════════════════════════════════════════════════════════════╝[/bold red]
+"""
+
+
+def require_fcra(ctx: click.Context, tool_name: str = "") -> None:
+    """Gate FCRA-regulated tools behind permissible purpose documentation."""
+    if tool_name:
+        config = ctx.obj.get("config") or Config()
+        orchestrator = Orchestrator(config=config)
+        t = orchestrator.get_tool(tool_name)
+        if t and not getattr(t, "requires_fcra", False):
+            return  # tool doesn't need FCRA
+    fcra_purpose = ctx.obj.get("fcra_purpose")
+    if not fcra_purpose:
+        console.print(FCRA_BANNER)
+        sys.exit(1)
+
+
 @click.group()
 @click.option(
     "--authorization",
@@ -107,8 +133,21 @@ def require_authorization(ctx: click.Context, tool_name: str = "") -> None:
 )
 @click.option("--verbose", "-v", is_flag=True, default=False, help="Verbose output.")
 @click.option("--dry-run", is_flag=True, default=False, help="Show what would execute without running.")
+@click.option(
+    "--fcra-permissible-purpose",
+    type=str,
+    default=None,
+    help="Engagement ID for FCRA permissible purpose (required for commercial identity tools).",
+)
+@click.option(
+    "--confirm-costs",
+    is_flag=True,
+    default=False,
+    help="Confirm acceptance of per-query API costs for paid tools (e.g., Twilio).",
+)
 @click.pass_context
-def cli(ctx, authorization, output, output_format, timeout, parallel, verbose, dry_run):
+def cli(ctx, authorization, output, output_format, timeout, parallel, verbose, dry_run,
+        fcra_permissible_purpose, confirm_costs):
     """OhSINT — Unified OSINT Reconnaissance Orchestrator."""
     ctx.ensure_object(dict)
     ctx.obj["authorization"] = authorization
@@ -118,6 +157,8 @@ def cli(ctx, authorization, output, output_format, timeout, parallel, verbose, d
     ctx.obj["parallel"] = parallel
     ctx.obj["verbose"] = verbose
     ctx.obj["dry_run"] = dry_run
+    ctx.obj["fcra_purpose"] = fcra_permissible_purpose
+    ctx.obj["confirm_costs"] = confirm_costs
     ctx.obj["config"] = Config()
 
     # Configure logging
@@ -134,7 +175,7 @@ def cli(ctx, authorization, output, output_format, timeout, parallel, verbose, d
 @click.option(
     "--profile",
     "-p",
-    type=click.Choice(["standard", "passive", "infrastructure", "threat-intel", "active", "full", "metadata", "social", "people"]),
+    type=click.Choice(["standard", "passive", "infrastructure", "threat-intel", "phone", "identity", "commercial_identity", "active", "full", "metadata", "social", "people"]),
     default="standard",
     help="Scan profile.",
 )
@@ -148,6 +189,10 @@ def full_recon(ctx, target, profile):
     # Only require auth if the profile includes active tools
     if profile in ("active", "full"):
         require_authorization(ctx)
+    # FCRA-gated profiles require both authorization and FCRA purpose
+    if profile == "commercial_identity":
+        require_authorization(ctx)
+        require_fcra(ctx)
     output_dir = _resolve_output_dir(ctx, target)
 
     orchestrator = Orchestrator(
@@ -177,6 +222,7 @@ def full_recon(ctx, target, profile):
 def tool(ctx, target, tool_name):
     """Run a single OSINT tool by name."""
     require_authorization(ctx, tool_name=tool_name)
+    require_fcra(ctx, tool_name=tool_name)
 
     if ctx.obj.get("dry_run"):
         orchestrator = Orchestrator(config=ctx.obj["config"])

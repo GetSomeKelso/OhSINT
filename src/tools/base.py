@@ -90,6 +90,8 @@ class BaseTool(ABC):
     requires_api_keys: Tuple[str, ...] = ()  # immutable to avoid shared-state bugs
     accepted_target_types: Tuple[TargetType, ...] = ()  # what this tool wants (order = priority)
     is_passive: bool = True  # passive tools query public sources only; active tools interact with target
+    requires_fcra: bool = False  # FCRA-gated tools require --fcra-permissible-purpose
+    estimated_cost_per_query: float = 0.0  # estimated API cost per invocation (USD)
 
     def __init__(self, config: Optional[Config] = None):
         self.config = config or Config()

@@ -73,6 +73,7 @@ class TargetType(str, Enum):
     PERSON_NAME = "person_name"
     USERNAME = "username"
     EMAIL = "email"
+    PHONE = "phone"
     FILEPATH = "filepath"
     URL = "url"
 
@@ -94,6 +95,7 @@ class ResolvedTarget(BaseModel):
     person_name: Optional[str] = None
     username: Optional[str] = None
     email: Optional[str] = None
+    phone: Optional[str] = None
     filepath: Optional[str] = None
     url: Optional[str] = None
 
@@ -106,6 +108,7 @@ class ResolvedTarget(BaseModel):
         TargetType.PERSON_NAME: "person_name",
         TargetType.USERNAME: "username",
         TargetType.EMAIL: "email",
+        TargetType.PHONE: "phone",
         TargetType.FILEPATH: "filepath",
         TargetType.URL: "url",
     }
@@ -152,6 +155,10 @@ _DOMAIN_RE = re.compile(
 )
 _EMAIL_RE = re.compile(
     r"^[\w.+-]+@[\w-]+\.[\w.-]+$"
+)
+# Phone: +1-555-867-5309, +44 20 7946 0958, (555) 867-5309, etc.
+_PHONE_RE = re.compile(
+    r"^\+?\d[\d\s.()-]{6,18}\d$"
 )
 _URL_RE = re.compile(
     r"^https?://", re.IGNORECASE
@@ -206,6 +213,10 @@ def _detect(raw: str) -> Tuple[TargetType, float]:
     # Email
     if _EMAIL_RE.match(s):
         return TargetType.EMAIL, 0.95
+
+    # Phone number — after email/IP to avoid false matches
+    if _PHONE_RE.match(s) and sum(c.isdigit() for c in s) >= 7:
+        return TargetType.PHONE, 0.90
 
     # Domain — has dots and a valid TLD
     if _DOMAIN_RE.match(s) and "." in s:
@@ -317,6 +328,9 @@ def _derive(target: ResolvedTarget) -> None:
             if handle.lower().startswith(prefix):
                 handle = handle[len(prefix):].strip("/")
         target.github_handle = handle
+
+    # ── From PHONE ──
+    # Can't derive other fields from a bare phone number without API lookups.
 
     # ── From IP ──
     # Can't derive much from a bare IP without DNS.  Leave other fields as-is.
