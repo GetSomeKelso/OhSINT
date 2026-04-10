@@ -39,6 +39,10 @@ sudo apt install -y libimage-exiftool-perl golang-go ruby ruby-dev theharvester 
 pip install shodan crosslinked sherlock-project maigret holehe h8mail waymore
 go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 
+# Phone & Identity tools are API-based (httpx) — no extra install needed.
+# Just configure API keys for: numverify, twilio, censys, intelx, virustotal
+# See docs/tools.md for per-tool API key setup and free tier limits.
+
 # Configure API keys
 cp configs/api_keys.yaml.example configs/api_keys.yaml
 nano configs/api_keys.yaml
@@ -55,6 +59,8 @@ ohsint install-check
 ohsint api-keys   # check status
 ```
 
+#### Core keys (start with these)
+
 | Config Key | Where to Get It | Free Tier |
 |------------|----------------|-----------|
 | `shodan.api_key` | [account.shodan.io](https://account.shodan.io) | $49 one-time |
@@ -64,6 +70,16 @@ ohsint api-keys   # check status
 | `mcp_server.bearer_token` | Self-generated ([docs/security.md](docs/security.md)) | N/A |
 
 GitHub token scopes: `public_repo`, `read:org`, `read:user` (read-only).
+
+#### Phone & Identity keys
+
+| Config Key | Where to Get It | Free Tier |
+|------------|----------------|-----------|
+| `numverify.api_key` | [numverify.com](https://numverify.com/) | 100 req/mo |
+| `twilio.account_sid` + `auth_token` | [console.twilio.com](https://console.twilio.com/) | ~$0.005/lookup |
+| `censys.api_id` + `api_secret` | [search.censys.io/account/api](https://search.censys.io/account/api) | 250 req/mo |
+| `intelx.api_key` | [intelx.io/account](https://intelx.io/account?tab=developer) | ~10 searches/day |
+| `whitepages_pro.api_key` | [pro.whitepages.com](https://pro.whitepages.com/) | Subscription (FCRA) |
 
 Optional keys and per-tool API requirements are documented in **[docs/tools.md](docs/tools.md)**.
 
