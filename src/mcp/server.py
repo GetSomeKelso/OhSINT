@@ -133,7 +133,7 @@ _DEFAULT_ALLOWED_NETWORKS = [
 def _is_allowed_host(host: str, allowed_networks: list) -> bool:
     """Check if a Host header value is from an allowed private network."""
     hostname = host.split(":")[0].strip()
-    if hostname in ("localhost", ""):
+    if hostname == "localhost":
         return True
     try:
         addr = ipaddress.ip_address(hostname)
@@ -206,10 +206,10 @@ async def osint_full_recon(
         )
         save_report(report, output_dir, output_format)
         logger.info("Full recon complete: %d findings for %s", len(report.findings), target)
-        _audit_log("full_recon", target, True, True, _time.time() - start)
+        _audit_log("full_recon", target, authorization_confirmed, True, _time.time() - start)
         return report.to_markdown()
     except Exception as exc:
-        _audit_log("full_recon", target, True, False, _time.time() - start, str(exc))
+        _audit_log("full_recon", target, authorization_confirmed, False, _time.time() - start, str(exc))
         raise
 
 
@@ -575,10 +575,10 @@ async def osint_phone_recon(
             orchestrator.run_profile, phone, "phone", output_dir,
         )
         save_report(report, output_dir, "all")
-        _audit_log("phone_recon", phone, True, True, _time.time() - start)
+        _audit_log("phone_recon", phone, authorization_confirmed, True, _time.time() - start)
         return report.to_markdown()
     except Exception as exc:
-        _audit_log("phone_recon", phone, True, False, _time.time() - start, str(exc))
+        _audit_log("phone_recon", phone, authorization_confirmed, False, _time.time() - start, str(exc))
         raise
 
 
@@ -850,10 +850,10 @@ async def osint_people_recon(
             orchestrator.run_profile, company_name, scan_profile, output_dir,
         )
         save_report(report, output_dir, "all")
-        _audit_log("people_recon", company_name, True, True, _time.time() - start)
+        _audit_log("people_recon", company_name, authorization_confirmed, True, _time.time() - start)
         return report.to_markdown()
     except Exception as exc:
-        _audit_log("people_recon", company_name, True, False, _time.time() - start, str(exc))
+        _audit_log("people_recon", company_name, authorization_confirmed, False, _time.time() - start, str(exc))
         raise
 
 
@@ -992,7 +992,13 @@ def main():
         app = mcp.sse_app()
 
         async def _auth_wrapper(scope, receive, send):
-            """ASGI middleware that validates Bearer token on all HTTP requests."""
+            """ASGI middleware that validates Bearer token on all HTTP requests.
+
+            Only checks HTTP scope types. MCP SSE transport is HTTP-only,
+            so non-HTTP ASGI types (e.g., lifespan) are passed through
+            without authentication. If MCP adds WebSocket transport in
+            the future, this middleware must be extended.
+            """
             if scope["type"] == "http":
                 headers = dict(scope.get("headers", []))
                 auth_header = headers.get(b"authorization", b"").decode()

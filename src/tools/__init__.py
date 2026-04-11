@@ -103,6 +103,13 @@ __all__ = [
     "TracersTool",
     "IdiTool",
     "SmartMoveTool",
+    "SpyCloudTool",
+    "LexisNexisTool",
+    "TloTool",
+    "ClearTool",
+    "TracersTool",
+    "IdiTool",
+    "SmartMoveTool",
     # LinkedIn / People Recon
     "CrossLinked",
     "InSpy",

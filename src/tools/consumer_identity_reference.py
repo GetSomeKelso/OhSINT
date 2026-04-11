@@ -68,7 +68,7 @@ class ConsumerIdentityReference(BaseTool):
             phone = re.sub(r'[\s().+-]', '', target)
             portals = _PHONE_PORTALS
             fmt_key = "phone"
-            fmt_val = phone
+            fmt_val = quote_plus(phone)
         elif is_email:
             portals = _EMAIL_PORTALS
             fmt_key = "email"

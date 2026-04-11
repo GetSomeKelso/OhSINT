@@ -35,6 +35,17 @@ class BeenVerifiedTool(BaseTool):
         import time as _time
         import httpx
 
+        # Defense-in-depth: FCRA check at tool level (also enforced by CLI/MCP gates)
+        if not kwargs.get("fcra_purpose"):
+            return ToolResult(
+                tool_name=self.name, target=target, raw_output="",
+                structured_data={"findings": []}, execution_time_seconds=0.0,
+                errors=[
+                    "FCRA permissible purpose required. This tool accesses commercial "
+                    "identity resolution services governed by the Fair Credit Reporting Act."
+                ],
+            )
+
         api_key = self.config.get_api_key("beenverified", "api_key")
         if not api_key:
             return ToolResult(

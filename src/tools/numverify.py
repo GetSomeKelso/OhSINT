@@ -51,6 +51,7 @@ class NumVerifyTool(BaseTool):
         start = _time.time()
         findings = []
         errors = []
+        data = {}
 
         try:
             with httpx.Client(timeout=timeout) as client:
@@ -98,7 +99,7 @@ class NumVerifyTool(BaseTool):
         elapsed = _time.time() - start
         return ToolResult(
             tool_name=self.name, target=target,
-            raw_output=str(data) if 'data' in dir() else "",
+            raw_output=str(data),
             structured_data={"findings": findings},
             errors=errors, execution_time_seconds=elapsed,
         )

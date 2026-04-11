@@ -63,6 +63,8 @@ class HudsonRockTool(BaseTool):
         if api_key:
             headers["api-key"] = api_key
 
+        stealers = []
+
         try:
             with httpx.Client(timeout=timeout) as client:
                 resp = client.get(endpoint, params=params, headers=headers)
@@ -127,7 +129,7 @@ class HudsonRockTool(BaseTool):
         return ToolResult(
             tool_name=self.name, target=target,
             raw_output="\n".join(raw_parts),
-            structured_data={"total_stealers": len(stealers) if 'stealers' in dir() else 0, "findings": findings},
+            structured_data={"total_stealers": len(stealers), "findings": findings},
             errors=errors, execution_time_seconds=elapsed,
         )
 

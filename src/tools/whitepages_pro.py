@@ -39,6 +39,17 @@ class WhitepagesProTool(BaseTool):
     def run(self, target: str, timeout: int = 300, **kwargs) -> ToolResult:
         import time as _time
 
+        # Defense-in-depth: FCRA check at tool level (also enforced by CLI/MCP gates)
+        if not kwargs.get("fcra_purpose"):
+            return ToolResult(
+                tool_name=self.name, target=target, raw_output="",
+                structured_data={}, execution_time_seconds=0.0,
+                errors=[
+                    "FCRA permissible purpose required. This tool accesses commercial "
+                    "identity resolution services governed by the Fair Credit Reporting Act."
+                ],
+            )
+
         api_key = self.config.get_api_key("whitepages_pro", "api_key")
         if not api_key:
             return ToolResult(
@@ -56,7 +67,8 @@ class WhitepagesProTool(BaseTool):
             with httpx.Client(timeout=timeout) as client:
                 resp = client.get(
                     f"{WHITEPAGES_PRO_API}/phone",
-                    params={"phone": phone, "api_key": api_key},
+                    params={"phone": phone},
+                    headers={"Api-Key": api_key},
                 )
                 resp.raise_for_status()
                 data = resp.json()
