@@ -90,7 +90,7 @@ Keys can also be set via environment variables: `OSINT_<TOOL>_<KEY>` (uppercased
 | Profile | Tools | Auth Required |
 |---------|-------|---------------|
 | `standard` | 15 tools — core passive recon (default) | No |
-| `passive` | 23 tools — all passive tools, zero target interaction | No |
+| `passive` | 30 tools — all passive tools, zero target interaction | No |
 | `infrastructure` | 6 tools — subfinder, crtsh, whois, theHarvester, shodan, brave_search | No |
 | `threat-intel` | 4 tools — virustotal, h8mail, waymore, shodan | No |
 | `social` | 8 tools — theHarvester, spiderfoot, creepy, crosslinked, inspy, sherlock, maigret, holehe | No |
@@ -109,7 +109,7 @@ Profiles are defined in `configs/scan_profiles.yaml`.
 ```bash
 # Passive recon — no authorization needed
 ohsint full-recon -t example.com                        # standard (default, 15 tools)
-ohsint full-recon -t example.com -p passive             # all 23 passive tools
+ohsint full-recon -t example.com -p passive             # all 30 passive tools
 ohsint full-recon -t example.com -p infrastructure      # subdomains, certs, WHOIS
 ohsint full-recon -t example.com -p threat-intel        # reputation, breaches, archives
 ohsint full-recon -t example.com -p social              # people + social media

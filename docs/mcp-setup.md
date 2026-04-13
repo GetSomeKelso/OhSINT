@@ -201,7 +201,7 @@ Restart Claude Code for the tools to load.
 
 ## MCP Tools Available
 
-Once connected, 40+ MCP tools are available. **Passive tools** run without `authorization_confirmed`. **Active tools** (spiderfoot, recon-ng, linkedin2username, xray, linkedint) require `authorization_confirmed: true`. **FCRA-gated tools** (whitepages_pro, beenverified) additionally require `fcra_purpose`.
+Once connected, 40+ MCP tools are available. **Passive tools** run without `authorization_confirmed`. **Active tools** (spiderfoot, recon-ng, linkedin2username, xray, linkedint) require `authorization_confirmed: true`. **FCRA-gated tools** (whitepages_pro, beenverified, + 6 stubs: lexisnexis, tlo, clear, tracers, idi, smartmove) additionally require `fcra_purpose`.
 
 | MCP Tool | Description |
 |----------|-------------|

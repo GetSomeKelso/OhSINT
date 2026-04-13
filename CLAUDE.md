@@ -18,7 +18,7 @@ The operator (SheriffBart) is an IT Director / Security Architect / Penetration 
 
 - **Passive tools (38)** run without authorization. They query public data sources and never touch the target.
 - **Active tools (5)** require explicit authorization before execution: spiderfoot, recon-ng, xray, linkedin2username, linkedint.
-- **FCRA-gated tools (9)** require BOTH `--authorization` AND `--fcra-permissible-purpose <engagement-id>`. These access commercial identity resolution services governed by the Fair Credit Reporting Act: whitepages_pro, beenverified, lexisnexis, tlo, clear, tracers, idi, smartmove.
+- **FCRA-gated tools (8)** require BOTH `--authorization` AND `--fcra-permissible-purpose <engagement-id>`. These access commercial identity resolution services governed by the Fair Credit Reporting Act: whitepages_pro, beenverified, lexisnexis, tlo, clear, tracers, idi, smartmove.
 - Never run an active tool without the user confirming they have written authorization.
 - When in doubt, ask. Do not assume authorization carries over from a previous request.
 
@@ -147,7 +147,7 @@ When the user asks to "investigate", "validate", or "deep dive" on findings from
 | Profile | Tools | Auth | Use When |
 |---------|-------|------|----------|
 | `standard` | 15 | No | Default quick scan |
-| `passive` | 23 | No | Comprehensive passive — all passive tools |
+| `passive` | 30 | No | Comprehensive passive — all passive tools |
 | `active` | 5 | **Yes** | Active tools only |
 | `full` | 43 | **Yes** | Everything — passive + active |
 | `infrastructure` | 6 | No | Domain-focused — subdomains, certs, WHOIS |

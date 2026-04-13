@@ -33,7 +33,7 @@ standard:
         mode: "U"
 
 passive:
-  description: "All 23 passive tools — comprehensive passive recon, zero target interaction"
+  description: "All 30 passive tools — comprehensive passive recon, zero target interaction"
   inherits: standard
   tools:
     - spiderfoot:
@@ -52,6 +52,13 @@ passive:
         mode: "full"
     - creepy:
         mode: "social"
+    # Phone & Identity (passive)
+    - numverify
+    - twilio_lookup
+    - censys
+    - intelx
+    - hudson_rock
+    - consumer_identity_reference
 
 active:
   description: "Active recon only — direct interaction with target (requires explicit auth)"

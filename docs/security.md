@@ -193,7 +193,7 @@ Tools are classified as passive or active via `BaseTool.is_passive`:
 
 - **Passive tools** (38 of 43) query public data sources and run without authorization
 - **Active tools** (5 of 43) interact with target infrastructure or authenticate to third-party services and require `--authorization` or `authorization_confirmed: true`
-- **FCRA-gated tools** (9 of 43) access commercial identity resolution services governed by the Fair Credit Reporting Act and require BOTH `--authorization` AND `--fcra-permissible-purpose <engagement-id>`
+- **FCRA-gated tools** (8 of 43) access commercial identity resolution services governed by the Fair Credit Reporting Act and require BOTH `--authorization` AND `--fcra-permissible-purpose <engagement-id>`
 
 **Active tools:** spiderfoot, recon-ng, linkedin2username, xray, linkedint
 
