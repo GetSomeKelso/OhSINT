@@ -296,6 +296,213 @@ class TestCreepy:
 
 
 # ---------------------------------------------------------------------------
+# dnsx_cname
+# ---------------------------------------------------------------------------
+class TestDnsxCname:
+    def setup_method(self):
+        from src.tools.dnsx_cname import DnsxCname
+        self.tool = DnsxCname(config=config)
+
+    def test_parse_json_cname(self):
+        output = '{"host":"blog.example.com","cname":["example.github.io"]}\n{"host":"app.example.com","cname":["app-example.herokuapp.com"]}\n'
+        result = self.tool.parse_output(output, "example.com")
+        cmap = result.structured_data["cname_map"]
+        assert "blog.example.com" in cmap
+        assert "example.github.io" in cmap["blog.example.com"]
+        assert result.structured_data["total_resolved"] == 2
+        findings = result.structured_data["findings"]
+        assert len(findings) == 2
+        assert all(f["type"] == IntelType.DNS_RECORD for f in findings)
+
+    def test_parse_empty_output(self):
+        result = self.tool.parse_output("", "example.com")
+        assert result.structured_data["total_resolved"] == 0
+        assert result.structured_data["findings"] == []
+
+    def test_build_command_standalone(self):
+        cmd = self.tool.build_command("example.com")
+        assert "dnsx" in cmd
+        assert "-d" in cmd
+        assert "example.com" in cmd
+        assert "-cname" in cmd
+
+    def test_build_command_with_input_file(self):
+        cmd = self.tool.build_command("example.com", input_file="/tmp/subs.txt")
+        assert "-l" in cmd
+        assert "/tmp/subs.txt" in cmd
+        assert "-d" not in cmd
+
+
+# ---------------------------------------------------------------------------
+# subzy
+# ---------------------------------------------------------------------------
+class TestSubzy:
+    def setup_method(self):
+        from src.tools.subzy import SubzyTool
+        self.tool = SubzyTool(config=config)
+
+    def test_parse_json_vulnerable(self):
+        output = '{"subdomain":"blog.example.com","cname":"example.github.io","service":"GitHub Pages","vulnerable":true}\n'
+        result = self.tool.parse_output(output, "example.com")
+        assert result.structured_data["total_vulnerable"] == 1
+        findings = result.structured_data["findings"]
+        assert len(findings) == 1
+        assert findings[0]["type"] == IntelType.SUBDOMAIN_TAKEOVER
+        assert findings[0]["confidence"] == 0.7
+
+    def test_parse_text_vulnerable(self):
+        output = "[VULNERABLE] blog.example.com - Service: GitHub Pages\n[NOT VULNERABLE] www.example.com\n"
+        result = self.tool.parse_output(output, "example.com")
+        assert result.structured_data["total_vulnerable"] == 1
+        assert result.structured_data["findings"][0]["value"] == "blog.example.com"
+
+    def test_parse_empty(self):
+        result = self.tool.parse_output("", "example.com")
+        assert result.structured_data["total_vulnerable"] == 0
+
+    def test_standalone_returns_error(self):
+        result = self.tool.run("example.com")
+        assert result.errors
+        assert "input-file" in result.errors[0]
+
+
+# ---------------------------------------------------------------------------
+# nuclei_takeovers
+# ---------------------------------------------------------------------------
+class TestNucleiTakeovers:
+    def setup_method(self):
+        from src.tools.nuclei_takeovers import NucleiTakeovers
+        self.tool = NucleiTakeovers(config=config)
+
+    def test_parse_json_takeover(self):
+        output = '{"host":"https://blog.example.com","template-id":"github-takeover","matcher-name":"github","info":{"name":"GitHub Takeover","severity":"high"}}\n'
+        result = self.tool.parse_output(output, "example.com")
+        assert result.structured_data["total_found"] == 1
+        findings = result.structured_data["findings"]
+        assert len(findings) == 1
+        assert findings[0]["type"] == IntelType.SUBDOMAIN_TAKEOVER
+        assert findings[0]["value"] == "blog.example.com"  # protocol stripped
+        assert findings[0]["raw_data"]["severity"] == "high"
+
+    def test_parse_empty(self):
+        result = self.tool.parse_output("", "example.com")
+        assert result.structured_data["total_found"] == 0
+
+    def test_build_command_with_input_file(self):
+        cmd = self.tool.build_command("example.com", input_file="/tmp/cands.txt")
+        assert "-l" in cmd
+        assert "/tmp/cands.txt" in cmd
+        assert "-t" in cmd
+        assert "http/takeovers/" in cmd
+
+    def test_build_command_standalone(self):
+        cmd = self.tool.build_command("example.com")
+        assert "-u" in cmd
+        assert "example.com" in cmd
+
+
+# ---------------------------------------------------------------------------
+# Takeover report rendering
+# ---------------------------------------------------------------------------
+class TestTakeoverReport:
+    def test_markdown_takeover_section(self):
+        from src.models import IntelFinding, ReconReport
+        from datetime import datetime, timezone
+
+        report = ReconReport(
+            target="example.com",
+            scan_profile="subdomain_takeover",
+            start_time=datetime.now(timezone.utc),
+            end_time=datetime.now(timezone.utc),
+            authorization_confirmed=True,
+            tools_executed=["subzy", "nuclei_takeovers"],
+            findings=[
+                IntelFinding(
+                    type=IntelType.SUBDOMAIN_TAKEOVER,
+                    value="blog.example.com",
+                    source_tool="subzy,nuclei",
+                    confidence=0.95,
+                    tags=["takeover", "confirmed", "github-pages"],
+                    raw_data={
+                        "cname_target": "test.github.io",
+                        "provider_name": "GitHub Pages",
+                        "severity": "high",
+                        "poc_approach": "Create GitHub repo",
+                    },
+                ),
+            ],
+            summary={"subdomain_takeover": 1},
+        )
+        md = report.to_markdown()
+        assert "Subdomain Takeover Assessment" in md
+        assert "blog.example.com" in md
+        assert "GitHub Pages" in md
+        assert "Impact Assessment" in md
+        assert "Proof of Concept" in md
+
+    def test_html_takeover_section(self):
+        from src.models import IntelFinding, ReconReport
+        from datetime import datetime, timezone
+
+        report = ReconReport(
+            target="example.com",
+            scan_profile="subdomain_takeover",
+            start_time=datetime.now(timezone.utc),
+            end_time=datetime.now(timezone.utc),
+            authorization_confirmed=True,
+            tools_executed=["subzy"],
+            findings=[
+                IntelFinding(
+                    type=IntelType.SUBDOMAIN_TAKEOVER,
+                    value="app.example.com",
+                    source_tool="subzy",
+                    confidence=0.65,
+                    tags=["takeover", "unconfirmed", "heroku"],
+                    raw_data={
+                        "cname_target": "app.herokuapp.com",
+                        "provider_name": "Heroku",
+                        "severity": "high",
+                        "poc_approach": "Create Heroku app",
+                    },
+                ),
+            ],
+            summary={"subdomain_takeover": 1},
+        )
+        html = report.to_html()
+        assert "Subdomain Takeover Assessment" in html
+        assert "app.example.com" in html
+        assert "Heroku" in html
+
+
+# ---------------------------------------------------------------------------
+# Scope parser
+# ---------------------------------------------------------------------------
+class TestScopeParser:
+    def test_parse_targets_file(self, tmp_path):
+        from src.pipelines.scope_parser import parse_targets_file
+        f = tmp_path / "targets.txt"
+        f.write_text("example.com\n# comment\nhilton.io\n\nhilton.com\n")
+        domains = parse_targets_file(f)
+        assert domains == ["example.com", "hilton.com", "hilton.io"]
+
+    def test_parse_scope_eligible(self, tmp_path):
+        from src.pipelines.scope_parser import parse_scope_file, extract_domains_from_scope
+        f = tmp_path / "scope.txt"
+        f.write_text(
+            "hilton.com\tDomain\tCritical\tEligible\n"
+            "*.hilton.io\tWildcard\tCritical\tEligible\n"
+            "82.196.42.196/28\tCIDR\tCritical\tEligible\n"
+            "pim.hilton.com\tDomain\tNone\tIneligible\n"
+        )
+        assets = parse_scope_file(f)
+        domains = extract_domains_from_scope(assets, include_ineligible=False)
+        domain_names = [d["domain"] for d in domains]
+        assert "hilton.com" in domain_names
+        assert "hilton.io" in domain_names
+        assert "pim.hilton.com" not in domain_names
+
+
+# ---------------------------------------------------------------------------
 # Models — deduplication and reporting
 # ---------------------------------------------------------------------------
 class TestModels:

@@ -1,0 +1,130 @@
+# OhSINT — Subdomain Takeover Provider Fingerprints
+#
+# Each provider entry maps a CNAME pattern to the error fingerprint
+# returned when the backing resource no longer exists (dangling record).
+# Used by the takeover pipeline to filter dnsx CNAME results and
+# cross-validate subzy/nuclei findings.
+
+providers:
+  - name: "GitHub Pages"
+    pattern: "github.io"
+    fingerprints:
+      - "There isn't a GitHub Pages site here"
+    poc: "Create GitHub repo with matching name and enable Pages"
+    severity: high
+
+  - name: "Heroku"
+    pattern: "herokuapp.com"
+    fingerprints:
+      - "No such app"
+      - "no-such-app"
+    poc: "Create Heroku app with matching subdomain prefix"
+    severity: high
+
+  - name: "AWS S3"
+    pattern: "s3.amazonaws.com"
+    fingerprints:
+      - "NoSuchBucket"
+      - "The specified bucket does not exist"
+    poc: "Create S3 bucket matching the subdomain prefix"
+    severity: high
+
+  - name: "Azure Blob"
+    pattern: "blob.core.windows.net"
+    fingerprints:
+      - "BlobNotFound"
+      - "The specified container does not exist"
+    poc: "Create Azure Blob storage container with matching name"
+    severity: high
+
+  - name: "Azure Web App"
+    pattern: "azurewebsites.net"
+    fingerprints:
+      - "404 Web Site not found"
+    poc: "Create Azure Web App with matching subdomain prefix"
+    severity: high
+
+  - name: "AWS CloudFront"
+    pattern: "cloudfront.net"
+    fingerprints:
+      - "ERROR: The request could not be satisfied"
+      - "Bad request"
+    poc: "Create CloudFront distribution with matching CNAME"
+    severity: medium
+
+  - name: "Fastly"
+    pattern: "fastly.net"
+    fingerprints:
+      - "Fastly error: unknown domain"
+    poc: "Create Fastly service with matching domain"
+    severity: high
+
+  - name: "Shopify"
+    pattern: "shopify.com"
+    fingerprints:
+      - "Sorry, this shop is currently unavailable"
+    poc: "Register Shopify store with matching custom domain"
+    severity: medium
+
+  - name: "Ghost"
+    pattern: "ghost.io"
+    fingerprints:
+      - "The thing you were looking for is no longer here"
+    poc: "Create Ghost blog with matching custom domain"
+    severity: medium
+
+  - name: "Webflow"
+    pattern: "webflow.io"
+    fingerprints:
+      - "The page you are looking for doesn't exist"
+    poc: "Create Webflow site with matching custom domain"
+    severity: medium
+
+  - name: "Netlify"
+    pattern: "netlify.app"
+    fingerprints:
+      - "Not found - Request ID"
+    poc: "Create Netlify site with matching custom domain"
+    severity: high
+
+  - name: "Surge"
+    pattern: "surge.sh"
+    fingerprints:
+      - "project not found"
+    poc: "Deploy Surge project with matching subdomain"
+    severity: medium
+
+  - name: "ReadMe"
+    pattern: "readme.io"
+    fingerprints:
+      - "Project doesnt exist"
+    poc: "Create ReadMe project with matching custom domain"
+    severity: medium
+
+  - name: "HelpScout"
+    pattern: "helpscoutdocs.com"
+    fingerprints:
+      - "No settings were found for this company"
+    poc: "Create HelpScout Docs site with matching custom domain"
+    severity: medium
+
+  - name: "Zendesk"
+    pattern: "zendesk.com"
+    fingerprints:
+      - "Help Center Closed"
+    poc: "Create Zendesk instance with matching subdomain"
+    severity: medium
+
+  - name: "Pantheon"
+    pattern: "pantheon.io"
+    fingerprints:
+      - "404 error unknown site"
+    poc: "Create Pantheon site with matching custom domain"
+    severity: medium
+
+  - name: "Cargo"
+    pattern: "cargo.site"
+    fingerprints:
+      - "404 Not Found"
+    poc: "Create Cargo site with matching custom domain"
+    severity: low

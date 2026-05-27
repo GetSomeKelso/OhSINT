@@ -8,6 +8,7 @@ from typing import List
 
 import httpx
 
+from src.http_client import OhSINTHTTPClient
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
@@ -59,10 +60,11 @@ class TwilioLookupTool(BaseTool):
 
         try:
             auth = (account_sid, auth_token)
-            with httpx.Client(timeout=timeout, auth=auth) as client:
+            with OhSINTHTTPClient(self.config, timeout=timeout) as client:
                 resp = client.get(
                     f"{TWILIO_LOOKUP_URL}/{phone}",
                     params={"Fields": "caller_name,line_type_intelligence"},
+                    auth=auth,
                 )
                 resp.raise_for_status()
                 data = resp.json()

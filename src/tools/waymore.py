@@ -2,43 +2,19 @@
 
 from __future__ import annotations
 
-import re
 from typing import List
-from urllib.parse import urlparse
 
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
 from src.tools.base import BaseTool
-
-# File extensions that indicate sensitive/interesting content
-_SENSITIVE_EXTENSIONS = frozenset({
-    ".env", ".bak", ".sql", ".log", ".conf", ".config", ".cfg",
-    ".ini", ".yml", ".yaml", ".json", ".xml", ".key", ".pem",
-    ".crt", ".p12", ".pfx", ".old", ".backup", ".dump", ".tar",
-    ".gz", ".zip", ".rar",
-})
-
-_DOCUMENT_EXTENSIONS = frozenset({
-    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-    ".odt", ".ods", ".odp", ".csv", ".rtf",
-})
-
-_TECH_PATTERNS = [
-    (r'/api/', "api-endpoint"),
-    (r'/v[12]/api', "api-endpoint"),
-    (r'/graphql', "graphql"),
-    (r'/swagger', "swagger"),
-    (r'/wp-', "wordpress"),
-    (r'/wp-admin', "wordpress-admin"),
-    (r'/wp-content/plugins', "wordpress-plugin"),
-    (r'/administrator', "admin-panel"),
-    (r'/phpmyadmin', "phpmyadmin"),
-    (r'\.php\?', "php"),
-    (r'\.asp', "asp"),
-    (r'\.jsp', "jsp"),
-    (r'/cgi-bin/', "cgi"),
-]
+from src.tools._url_classify import (
+    classify_url,
+    extract_subdomain,
+    SENSITIVE_EXTENSIONS,
+    DOCUMENT_EXTENSIONS,
+    TECH_PATTERNS,
+)
 
 
 @register_tool
@@ -100,63 +76,21 @@ class Waymore(BaseTool):
             urls.add(line)
 
             # Extract subdomain
-            try:
-                parsed = urlparse(line)
-                hostname = parsed.hostname
-                if hostname and hostname.endswith(f".{target}"):
-                    subdomains.add(hostname)
-            except Exception:
-                continue
+            sub = extract_subdomain(line, target)
+            if sub:
+                subdomains.add(sub)
 
-            lower = line.lower()
-            path = parsed.path.lower() if parsed else lower
-
-            # Categorize URL
-            categorized = False
-
-            # Check sensitive files
-            for ext in _SENSITIVE_EXTENSIONS:
-                if path.endswith(ext) or ext + "?" in path:
+            # Classify URL into finding categories
+            finding = classify_url(line, source_tool=self.name)
+            if finding:
+                findings.append(finding)
+                ftype = finding["type"]
+                if ftype == IntelType.SENSITIVE_FILE:
                     sensitive_files.append(line)
-                    findings.append({
-                        "type": IntelType.SENSITIVE_FILE,
-                        "value": line,
-                        "source_tool": self.name,
-                        "confidence": 0.7,
-                        "tags": ["waymore", "archived", f"ext:{ext}"],
-                    })
-                    categorized = True
-                    break
-
-            # Check documents
-            if not categorized:
-                for ext in _DOCUMENT_EXTENSIONS:
-                    if path.endswith(ext):
-                        documents.append(line)
-                        findings.append({
-                            "type": IntelType.DOCUMENT,
-                            "value": line,
-                            "source_tool": self.name,
-                            "confidence": 0.7,
-                            "tags": ["waymore", "archived", "document"],
-                        })
-                        categorized = True
-                        break
-
-            # Check technology indicators
-            if not categorized:
-                for pattern, tag in _TECH_PATTERNS:
-                    if re.search(pattern, lower):
-                        tech_indicators.append({"url": line, "tech": tag})
-                        findings.append({
-                            "type": IntelType.TECHNOLOGY,
-                            "value": f"{tag}: {line}",
-                            "source_tool": self.name,
-                            "confidence": 0.6,
-                            "tags": ["waymore", "archived", tag],
-                        })
-                        categorized = True
-                        break
+                elif ftype == IntelType.DOCUMENT:
+                    documents.append(line)
+                elif ftype == IntelType.TECHNOLOGY:
+                    tech_indicators.append({"url": line, "tech": finding["tags"][-1]})
 
         # Add subdomain findings
         for sub in sorted(subdomains):

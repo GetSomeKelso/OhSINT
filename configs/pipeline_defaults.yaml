@@ -1,0 +1,32 @@
+# OhSINT — Pipeline Default Configuration
+#
+# Tunable parameters for each pipeline module.
+# Override via environment variables: OSINT_<PIPELINE>_<KEY> (uppercased).
+
+url_harvest:
+  gau_max_urls: 500000          # Cap total URLs from gau (large orgs produce millions)
+  waymore_delay_seconds: 2      # Rate limit for Wayback Machine queries
+  crtsh_delay_seconds: 1        # Rate limit for crt.sh CDX queries
+  robots_max_snapshots: 200     # Max robots.txt Wayback snapshots to fetch
+
+secret_surface:
+  github_search_delay_seconds: 3  # GitHub Search API: 30 req/min authenticated
+  docker_max_images: 20           # Max Docker Hub images to scan per org
+  docker_max_image_size_mb: 500   # Skip images larger than this
+  trufflehog_timeout: 600         # Per-repo/image timeout for TruffleHog (seconds)
+
+js_analysis:
+  js_max_file_size_mb: 5          # Skip JS files larger than this
+  js_max_files: 500               # Cap total JS files to download
+  disable_sourcemap_recovery: false  # Set true to skip .map file checks
+  swagger_common_paths:
+    - /swagger.json
+    - /swagger/v1/swagger.json
+    - /swagger-ui.html
+    - /swagger-ui/index.html
+    - /api-docs
+    - /v2/api-docs
+    - /v3/api-docs
+    - /openapi.json
+    - /docs
+    - /redoc

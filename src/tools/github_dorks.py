@@ -116,7 +116,7 @@ class GithubDorks(BaseTool):
                 errors=["GitHub token not configured. Set github_dorks.github_token in api_keys.yaml"],
             )
 
-        env = os.environ.copy()
+        env = self._build_proxy_env() or os.environ.copy()
         env["GITHUB_TOKEN"] = token
 
         cmd = self.build_command(target, **kwargs)

@@ -1,6 +1,6 @@
 # OhSINT Tool Reference
 
-All 43 tools integrated into OhSINT, organized by category. Each entry includes the tool description, source repository, install method, API key requirements, and whether it runs passively or requires authorization.
+All 46 tools integrated into OhSINT, organized by category. Each entry includes the tool description, source repository, install method, API key requirements, and whether it runs passively or requires authorization.
 
 ---
 
@@ -35,6 +35,14 @@ All 43 tools integrated into OhSINT, organized by category. Each entry includes 
 | 15 | [Subfinder](#subfinder) | Passive | Optional |
 | 16 | [crt.sh](#crtsh) | Passive | None |
 | 17 | [WHOIS](#whois) | Passive | None |
+
+## Subdomain Takeover Detection
+
+| # | Tool | Type | API Key |
+|---|------|------|---------|
+| 44 | [dnsx (CNAME)](#dnsx-cname) | Passive | None |
+| 45 | [subzy](#subzy) | Passive | None |
+| 46 | [nuclei (takeovers)](#nuclei-takeovers) | Passive | None |
 
 ## Threat Intel & Breach Data
 
@@ -343,6 +351,53 @@ Domain registration and ownership lookup — registrant info, creation/expiratio
 - **OhSINT wrapper:** `src/tools/whois_tool.py`
 - **MCP tool:** `osint_whois`
 - **Profiles:** passive, infrastructure, full
+
+---
+
+### dnsx (CNAME)
+
+Fast DNS CNAME resolution — identifies dangling CNAMEs pointing at third-party cloud/SaaS providers for subdomain takeover detection.
+
+- **Repo:** [github.com/projectdiscovery/dnsx](https://github.com/projectdiscovery/dnsx)
+- **Install:** `go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest`
+- **API Keys:** None
+- **Type:** Passive (DNS resolution only)
+- **CLI:** `dnsx -l subdomains.txt -cname -resp -json -silent`
+- **OhSINT wrapper:** `src/tools/dnsx_cname.py`
+- **MCP tool:** `osint_dnsx_cname`
+- **Profiles:** subdomain_takeover
+
+---
+
+### subzy
+
+Subdomain takeover vulnerability checker — matches dangling CNAMEs against known provider fingerprints (GitHub Pages, Heroku, S3, Azure, etc.).
+
+- **Repo:** [github.com/PentestPad/subzy](https://github.com/PentestPad/subzy)
+- **Install:** `go install -v github.com/PentestPad/subzy@latest`
+- **API Keys:** None
+- **Type:** Passive (fingerprint matching against HTTP responses)
+- **CLI:** `subzy run --targets candidates.txt --hide_fails`
+- **OhSINT wrapper:** `src/tools/subzy.py`
+- **MCP tool:** `osint_subzy`
+- **Profiles:** subdomain_takeover
+
+---
+
+### nuclei (takeovers)
+
+Nuclei scanner restricted to takeover detection templates — secondary fingerprint validation layer cross-referenced with subzy findings.
+
+- **Repo:** [github.com/projectdiscovery/nuclei](https://github.com/projectdiscovery/nuclei)
+- **Install:** `go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest`
+- **Templates:** `nuclei -update-templates` (auto-downloads to `~/nuclei-templates/`)
+- **API Keys:** None
+- **Type:** Passive (HTTP fingerprint matching via templates)
+- **CLI:** `nuclei -l candidates.txt -t http/takeovers/ -severity medium,high,critical -json -silent`
+- **OhSINT wrapper:** `src/tools/nuclei_takeovers.py`
+- **MCP tool:** `osint_nuclei_takeovers`
+- **Profiles:** subdomain_takeover
+- **Config:** Set `NUCLEI_TEMPLATES_DIR` env var for custom templates path
 
 ---
 

@@ -49,13 +49,14 @@ class CrtSh(BaseTool):
         query = f"%.{target}" if wildcard else target
 
         try:
-            with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    CRTSH_API_URL,
-                    params={"q": query, "output": "json"},
-                )
-                response.raise_for_status()
-                entries = response.json()
+            from src.http_client import OhSINTHTTPClient
+            client = OhSINTHTTPClient(self.config, timeout=timeout)
+            response = client.get(
+                CRTSH_API_URL,
+                params={"q": query, "output": "json"},
+            )
+            response.raise_for_status()
+            entries = response.json()
         except httpx.HTTPStatusError as e:
             return ToolResult(
                 tool_name=self.name,

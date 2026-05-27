@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import List
 
+import httpx
+
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
@@ -44,7 +46,7 @@ class SpyCloudTool(BaseTool):
             )
 
         import time as _time
-        import httpx
+        from src.http_client import OhSINTHTTPClient
 
         api_key = self.config.get_api_key("spycloud", "api_key")
         if not api_key:
@@ -63,7 +65,7 @@ class SpyCloudTool(BaseTool):
         headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
 
         try:
-            with httpx.Client(timeout=timeout) as client:
+            with OhSINTHTTPClient(self.config, timeout=timeout) as client:
                 resp = client.get(
                     f"{api_base}/breach/data/emails/{target}",
                     headers=headers,

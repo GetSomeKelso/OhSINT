@@ -342,11 +342,444 @@ def api_keys(ctx):
     console.print(table)
 
 
+@cli.command()
+@click.option("--target", "-t", multiple=True, help="Target domain(s). Repeat for multiple.")
+@click.option("--targets-file", type=click.Path(exists=True), default=None,
+              help="File with one domain per line.")
+@click.option("--scope-file", type=click.Path(exists=True), default=None,
+              help="HackerOne/Bugcrowd scope file — parses assets, prompts for selection.")
+@click.option("--re-scan", type=click.Path(exists=True), default=None,
+              help="Previous report.json — skip enumeration, re-run fingerprinting only.")
+@click.option("--max-subdomains", type=int, default=5000,
+              help="Cap on total subdomains to process (default: 5000).")
+@click.option("--per-domain", is_flag=True, default=False,
+              help="Generate separate per-domain reports in addition to combined.")
+@click.pass_context
+def takeover(ctx, target, targets_file, scope_file, re_scan, max_subdomains, per_domain):
+    """Detect subdomain takeover vulnerabilities.
+
+    Enumerates subdomains, resolves CNAMEs, filters by provider patterns,
+    fingerprints dangling records. Detection only — does not claim resources.
+
+    Provide targets via -t flags, --targets-file, or --scope-file.
+    """
+    from src.pipelines.takeover import TakeoverPipeline
+
+    # Resolve target list: scope-file > targets-file > -t flags
+    domains = _resolve_takeover_targets(ctx, target, targets_file, scope_file)
+    if not domains:
+        console.print("[red]No targets specified. Use -t, --targets-file, or --scope-file.[/red]")
+        sys.exit(1)
+
+    config: Config = ctx.obj["config"]
+    pipeline = TakeoverPipeline(
+        config=config,
+        timeout=ctx.obj["timeout"],
+        verbose=ctx.obj["verbose"],
+    )
+
+    # Dry run
+    if ctx.obj.get("dry_run"):
+        console.print(f"[yellow][DRY RUN][/yellow] Subdomain takeover pipeline")
+        console.print(f"  Targets: {', '.join(domains)}\n")
+        table = Table(title="Pipeline stages")
+        table.add_column("Tool", style="cyan")
+        table.add_column("Installed")
+        table.add_column("Command preview")
+        for info in pipeline.dry_run(domains):
+            installed = "[green]Yes[/green]" if info["installed"] else "[red]No[/red]"
+            table.add_row(info["name"], installed, info["command"])
+        console.print(table)
+        return
+
+    console.print(f"[bold green]Starting subdomain takeover detection[/bold green]")
+    console.print(f"  Targets: {', '.join(domains)}")
+
+    re_scan_path = Path(re_scan) if re_scan else None
+    output_dir = _resolve_output_dir(ctx, "takeover_" + "_".join(domains[:3]))
+
+    report = pipeline.run(
+        targets=domains,
+        re_scan_path=re_scan_path,
+        max_subdomains=max_subdomains,
+    )
+
+    save_report(report, output_dir, ctx.obj["output_format"])
+    console.print(f"\n[green]Reports saved to {output_dir}[/green]")
+
+    # Per-domain reports
+    if per_domain and len(domains) > 1:
+        for domain in domains:
+            domain_findings = [
+                f for f in report.findings
+                if (f.raw_data or {}).get("parent_domain") == domain
+            ]
+            if domain_findings:
+                from src.models import ReconReport
+                domain_report = ReconReport(
+                    target=domain,
+                    scan_profile="subdomain_takeover",
+                    start_time=report.start_time,
+                    end_time=report.end_time,
+                    authorization_confirmed=True,
+                    tools_executed=report.tools_executed,
+                    tools_failed=report.tools_failed,
+                    findings=domain_findings,
+                    summary={f.type.value: 1 for f in domain_findings},
+                )
+                domain_dir = _resolve_output_dir(ctx, domain)
+                save_report(domain_report, domain_dir, ctx.obj["output_format"])
+                console.print(f"  [dim]Per-domain report: {domain_dir}[/dim]")
+
+    _print_takeover_summary(report)
+
+
+def _resolve_takeover_targets(ctx, target_flags, targets_file, scope_file) -> list[str]:
+    """Resolve target domains from the various input options."""
+    if scope_file:
+        from src.pipelines.scope_parser import parse_scope_file, extract_domains_from_scope
+        assets = parse_scope_file(Path(scope_file))
+        domain_assets = extract_domains_from_scope(assets, include_ineligible=True)
+
+        if not domain_assets:
+            console.print("[yellow]No domain/wildcard assets found in scope file.[/yellow]")
+            return []
+
+        # Present interactive selection
+        table = Table(title="Parsed scope assets")
+        table.add_column("", width=3)
+        table.add_column("Domain", style="cyan")
+        table.add_column("Type", style="dim")
+        table.add_column("Severity")
+        table.add_column("Eligibility")
+
+        for asset in domain_assets:
+            check = "[green]✓[/green]" if asset["eligible"] else "[red]✗[/red]"
+            elig = "[green]Eligible[/green]" if asset["eligible"] else "[red]Ineligible[/red]"
+            table.add_row(check, asset["domain"], asset["asset_type"], asset["severity"], elig)
+
+        console.print(table)
+        console.print()
+
+        # Default to eligible domains
+        eligible = [a["domain"] for a in domain_assets if a["eligible"]]
+        ineligible = [a["domain"] for a in domain_assets if not a["eligible"]]
+
+        if ineligible:
+            console.print(f"  [dim]{len(ineligible)} ineligible domain(s) excluded by default[/dim]")
+
+        if not eligible:
+            console.print("[yellow]No eligible domains found.[/yellow]")
+            include_all = click.confirm("Include ineligible domains anyway?", default=False)
+            if include_all:
+                return [a["domain"] for a in domain_assets]
+            return []
+
+        console.print(f"  [green]{len(eligible)} eligible domain(s) selected[/green]")
+        proceed = click.confirm(f"Run takeover scan on these {len(eligible)} domains?", default=True)
+        if not proceed:
+            return []
+        return eligible
+
+    if targets_file:
+        from src.pipelines.scope_parser import parse_targets_file
+        return parse_targets_file(Path(targets_file))
+
+    if target_flags:
+        return [t.lower().strip() for t in target_flags if t.strip()]
+
+    return []
+
+
+def _print_takeover_summary(report) -> None:
+    """Print a takeover-specific summary with severity coloring."""
+    console.print(f"\n[bold]Takeover Scan Summary[/bold]")
+    console.print(f"  Tools executed: {len(report.tools_executed)}")
+    console.print(f"  Tools failed:   {len(report.tools_failed)}")
+    console.print(f"  Total findings: {len(report.findings)}")
+
+    confirmed = [f for f in report.findings if "confirmed" in f.tags]
+    unconfirmed = [f for f in report.findings if "unconfirmed" in f.tags]
+    cname_only = [f for f in report.findings if "cname-only" in f.tags]
+
+    if confirmed:
+        console.print(f"\n  [bold red]CONFIRMED TAKEOVERS ({len(confirmed)}):[/bold red]")
+        for f in confirmed:
+            rd = f.raw_data or {}
+            console.print(
+                f"    [red]●[/red] {f.value} → {rd.get('cname_target', '?')} "
+                f"({rd.get('provider_name', '?')}) [{rd.get('severity', '?')}]"
+            )
+    if unconfirmed:
+        console.print(f"\n  [yellow]UNCONFIRMED ({len(unconfirmed)}):[/yellow]")
+        for f in unconfirmed:
+            rd = f.raw_data or {}
+            console.print(
+                f"    [yellow]○[/yellow] {f.value} → {rd.get('cname_target', '?')} "
+                f"({rd.get('provider_name', '?')})"
+            )
+    if cname_only:
+        console.print(f"\n  [dim]CNAME-ONLY ({len(cname_only)}):[/dim]")
+        for f in cname_only:
+            rd = f.raw_data or {}
+            console.print(
+                f"    [dim]·[/dim] {f.value} → {rd.get('cname_target', '?')} "
+                f"({rd.get('provider_name', '?')})"
+            )
+
+    if not report.findings:
+        console.print("\n  [green]No takeover candidates found — target appears safe.[/green]")
+
+
+@cli.command("url-harvest")
+@click.option("--target", "-t", multiple=True, help="Target domain(s).")
+@click.option("--targets-file", type=click.Path(exists=True), default=None)
+@click.option("--scope-file", type=click.Path(exists=True), default=None)
+@click.option("--max-urls", type=int, default=500000)
+@click.pass_context
+def url_harvest(ctx, target, targets_file, scope_file, max_urls):
+    """Harvest historical URLs from Wayback Machine, Common Crawl, OTX, URLScan."""
+    from src.pipelines.url_harvest import UrlHarvestPipeline
+
+    domains = _resolve_takeover_targets(ctx, target, targets_file, scope_file)
+    if not domains:
+        console.print("[red]No targets specified.[/red]")
+        sys.exit(1)
+
+    config: Config = ctx.obj["config"]
+    pipeline = UrlHarvestPipeline(config=config, timeout=ctx.obj["timeout"], verbose=ctx.obj["verbose"])
+
+    if ctx.obj.get("dry_run"):
+        console.print(f"[yellow][DRY RUN][/yellow] URL Harvest Pipeline")
+        console.print(f"  Targets: {', '.join(domains)}\n")
+        table = Table(title="Pipeline stages")
+        table.add_column("Tool", style="cyan")
+        table.add_column("Installed")
+        table.add_column("Command preview")
+        for info in pipeline.dry_run(domains):
+            installed = "[green]Yes[/green]" if info["installed"] else "[red]No[/red]"
+            table.add_row(info["name"], installed, info["command"])
+        console.print(table)
+        return
+
+    output_dir = _resolve_output_dir(ctx, "url_harvest_" + "_".join(domains[:3]))
+    console.print(f"[bold green]Starting URL harvest[/bold green]")
+    console.print(f"  Targets: {', '.join(domains)}")
+    report = pipeline.run(targets=domains, max_urls=max_urls, output_dir=output_dir)
+    save_report(report, output_dir, ctx.obj["output_format"])
+    console.print(f"\n[green]Reports saved to {output_dir}[/green]")
+    _print_summary(report)
+
+
+@cli.command("secret-surface")
+@click.option("--target", "-t", multiple=True, help="Target domain(s) or org name(s).")
+@click.option("--targets-file", type=click.Path(exists=True), default=None)
+@click.option("--scope-file", type=click.Path(exists=True), default=None)
+@click.pass_context
+def secret_surface(ctx, target, targets_file, scope_file):
+    """Discover leaked secrets across GitHub, Docker Hub, and Postman."""
+    from src.pipelines.secret_surface import SecretSurfacePipeline
+
+    domains = _resolve_takeover_targets(ctx, target, targets_file, scope_file)
+    if not domains:
+        console.print("[red]No targets specified.[/red]")
+        sys.exit(1)
+
+    config: Config = ctx.obj["config"]
+    pipeline = SecretSurfacePipeline(config=config, timeout=ctx.obj["timeout"], verbose=ctx.obj["verbose"])
+
+    if ctx.obj.get("dry_run"):
+        console.print(f"[yellow][DRY RUN][/yellow] Secret Surface Pipeline")
+        console.print(f"  Targets: {', '.join(domains)}\n")
+        table = Table(title="Pipeline stages")
+        table.add_column("Tool", style="cyan")
+        table.add_column("Installed")
+        table.add_column("Command preview")
+        for info in pipeline.dry_run(domains):
+            installed = "[green]Yes[/green]" if info["installed"] else "[red]No[/red]"
+            table.add_row(info["name"], installed, info["command"])
+        console.print(table)
+        return
+
+    output_dir = _resolve_output_dir(ctx, "secret_surface_" + "_".join(domains[:3]))
+    console.print(f"[bold green]Starting secret surface discovery[/bold green]")
+    console.print(f"  Targets: {', '.join(domains)}")
+    report = pipeline.run(targets=domains)
+    save_report(report, output_dir, ctx.obj["output_format"])
+    console.print(f"\n[green]Reports saved to {output_dir}[/green]")
+    _print_summary(report)
+
+
+@cli.command("js-analysis")
+@click.option("--target", "-t", multiple=True, help="Target domain(s).")
+@click.option("--targets-file", type=click.Path(exists=True), default=None)
+@click.option("--scope-file", type=click.Path(exists=True), default=None)
+@click.option("--js-urls-file", type=click.Path(exists=True), default=None,
+              help="JS URL list from url-harvest pipeline (js_urls.txt).")
+@click.pass_context
+def js_analysis(ctx, target, targets_file, scope_file, js_urls_file):
+    """Analyze JavaScript files for endpoints, secrets, and source maps."""
+    from src.pipelines.js_analysis import JsAnalysisPipeline
+
+    domains = _resolve_takeover_targets(ctx, target, targets_file, scope_file)
+    if not domains:
+        console.print("[red]No targets specified.[/red]")
+        sys.exit(1)
+
+    config: Config = ctx.obj["config"]
+    pipeline = JsAnalysisPipeline(config=config, timeout=ctx.obj["timeout"], verbose=ctx.obj["verbose"])
+
+    if ctx.obj.get("dry_run"):
+        console.print(f"[yellow][DRY RUN][/yellow] JS Analysis Pipeline")
+        console.print(f"  Targets: {', '.join(domains)}\n")
+        table = Table(title="Pipeline stages")
+        table.add_column("Tool", style="cyan")
+        table.add_column("Installed")
+        table.add_column("Command preview")
+        for info in pipeline.dry_run(domains):
+            installed = "[green]Yes[/green]" if info["installed"] else "[red]No[/red]"
+            table.add_row(info["name"], installed, info["command"])
+        console.print(table)
+        return
+
+    output_dir = _resolve_output_dir(ctx, "js_analysis_" + "_".join(domains[:3]))
+    console.print(f"[bold green]Starting JS analysis[/bold green]")
+    console.print(f"  Targets: {', '.join(domains)}")
+    report = pipeline.run(targets=domains, js_urls_file=js_urls_file, output_dir=output_dir)
+    save_report(report, output_dir, ctx.obj["output_format"])
+    console.print(f"\n[green]Reports saved to {output_dir}[/green]")
+    _print_summary(report)
+
+
+@cli.command("passive-full")
+@click.option("--target", "-t", multiple=True, help="Target domain(s).")
+@click.option("--targets-file", type=click.Path(exists=True), default=None)
+@click.option("--scope-file", type=click.Path(exists=True), default=None)
+@click.option("--skip-takeover", is_flag=True, default=False, help="Skip subdomain takeover pipeline.")
+@click.pass_context
+def passive_full(ctx, target, targets_file, scope_file, skip_takeover):
+    """Run full passive OSINT: takeover + URL harvest + secret surface + JS analysis."""
+    from src.pipelines.passive_full import PassiveFullPipeline
+
+    domains = _resolve_takeover_targets(ctx, target, targets_file, scope_file)
+    if not domains:
+        console.print("[red]No targets specified.[/red]")
+        sys.exit(1)
+
+    config: Config = ctx.obj["config"]
+    pipeline = PassiveFullPipeline(config=config, timeout=ctx.obj["timeout"], verbose=ctx.obj["verbose"])
+
+    if ctx.obj.get("dry_run"):
+        console.print(f"[yellow][DRY RUN][/yellow] Full Passive Pipeline")
+        console.print(f"  Targets: {', '.join(domains)}\n")
+        table = Table(title="All pipeline stages")
+        table.add_column("Tool", style="cyan")
+        table.add_column("Installed")
+        table.add_column("Command preview")
+        for info in pipeline.dry_run(domains):
+            installed = "[green]Yes[/green]" if info["installed"] else "[red]No[/red]"
+            table.add_row(info["name"], installed, info["command"])
+        console.print(table)
+        return
+
+    output_dir = _resolve_output_dir(ctx, "passive_full_" + "_".join(domains[:3]))
+    console.print(f"[bold green]Starting full passive OSINT scan[/bold green]")
+    console.print(f"  Targets: {', '.join(domains)}")
+    report = pipeline.run(targets=domains, output_dir=output_dir, skip_takeover=skip_takeover)
+    save_report(report, output_dir, ctx.obj["output_format"])
+    console.print(f"\n[green]Reports saved to {output_dir}[/green]")
+    _print_summary(report)
+
+
+@cli.command("opsec-check")
+@click.pass_context
+def opsec_check(ctx):
+    """Verify OPSEC configuration — UA rotation, proxy egress, session isolation."""
+    config: Config = ctx.obj["config"]
+    opsec = config.get_opsec_config()
+
+    console.print("[bold]OPSEC Configuration Check[/bold]\n")
+
+    # Request hygiene
+    hygiene = opsec.get("request_hygiene", {})
+    ua_count = len(hygiene.get("user_agents", []))
+    rotate = hygiene.get("rotate_user_agent", False)
+    console.print(f"  {'[green]✓[/green]' if rotate else '[yellow]✗[/yellow]'} "
+                  f"User-Agent rotation: {'enabled' if rotate else 'disabled'} ({ua_count} agents)")
+
+    rate_limits = hygiene.get("rate_limits", {})
+    default_rpm = rate_limits.get("default_rpm", "not set")
+    per_host = rate_limits.get("per_host", {})
+    console.print(f"  [green]✓[/green] Rate limits: {default_rpm} rpm default, {len(per_host)} host overrides")
+
+    cookies = hygiene.get("cookies_disabled", False)
+    console.print(f"  {'[green]✓[/green]' if cookies else '[yellow]✗[/yellow]'} "
+                  f"Cookies: {'disabled' if cookies else 'enabled'}")
+
+    # Egress
+    egress = opsec.get("egress", {})
+    enabled = egress.get("enabled", False)
+    if enabled:
+        ptype = egress.get("proxy_type", "?")
+        phost = egress.get("proxy_host", "?")
+        pport = egress.get("proxy_port", "?")
+        console.print(f"  [green]✓[/green] Egress proxy: {ptype}://{phost}:{pport}")
+
+        # Test proxy connectivity
+        try:
+            import httpx
+            # Direct IP
+            direct_resp = httpx.get("https://api.ipify.org", timeout=10)
+            direct_ip = direct_resp.text.strip()
+
+            # Proxied IP
+            proxy_url = f"{ptype}://{phost}:{pport}"
+            proxied_resp = httpx.get("https://api.ipify.org", timeout=15, proxy=proxy_url)
+            proxied_ip = proxied_resp.text.strip()
+
+            if direct_ip != proxied_ip:
+                console.print(f"    [green]✓[/green] Proxy working: {direct_ip} → {proxied_ip}")
+            else:
+                console.print(f"    [red]✗[/red] Proxy NOT working: same IP ({direct_ip})")
+        except Exception as e:
+            console.print(f"    [red]✗[/red] Proxy test failed: {e}")
+
+        if ptype == "tor":
+            import shutil
+            if shutil.which("tor"):
+                console.print(f"    [green]✓[/green] Tor binary found")
+            else:
+                console.print(f"    [red]✗[/red] Tor binary not found")
+    else:
+        console.print(f"  [yellow]✗[/yellow] Egress proxy: disabled (enable in configs/opsec.yaml)")
+
+    # Session isolation
+    session = opsec.get("session", {})
+    random_suffix = session.get("random_suffix", False)
+    auto_archive = session.get("auto_archive", False)
+    console.print(f"  {'[green]✓[/green]' if random_suffix else '[yellow]✗[/yellow]'} "
+                  f"Session isolation: random suffix {'enabled' if random_suffix else 'disabled'}")
+    console.print(f"  {'[green]✓[/green]' if auto_archive else '[dim]-[/dim]'} "
+                  f"Auto-archive: {'enabled' if auto_archive else 'disabled'}")
+
+    if not opsec:
+        console.print("\n[yellow]No configs/opsec.yaml found — using defaults[/yellow]")
+
+
 def _resolve_output_dir(ctx: click.Context, target: str) -> Path:
     if ctx.obj["output"]:
         return Path(ctx.obj["output"])
+    config: Config = ctx.obj["config"]
+    opsec = config.get_opsec_config()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_target = target.replace("/", "_").replace(":", "_")
+
+    # Module 3: Session isolation — random suffix
+    if opsec.get("session", {}).get("random_suffix", False):
+        import secrets as _secrets
+        suffix = _secrets.token_hex(4)
+        return DEFAULT_RESULTS_DIR / f"{safe_target}_{timestamp}_{suffix}"
+
     return DEFAULT_RESULTS_DIR / safe_target / timestamp
 
 

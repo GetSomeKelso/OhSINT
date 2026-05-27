@@ -7,6 +7,7 @@ from typing import List
 
 import httpx
 
+from src.http_client import OhSINTHTTPClient
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
@@ -66,7 +67,7 @@ class HudsonRockTool(BaseTool):
         stealers = []
 
         try:
-            with httpx.Client(timeout=timeout) as client:
+            with OhSINTHTTPClient(self.config, timeout=timeout) as client:
                 resp = client.get(endpoint, params=params, headers=headers)
                 resp.raise_for_status()
                 data = resp.json()

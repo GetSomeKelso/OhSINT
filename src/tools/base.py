@@ -122,6 +122,28 @@ class BaseTool(ABC):
                     missing.append(key_spec)
         return missing
 
+    def _build_proxy_env(self) -> Optional[dict]:
+        """Build subprocess env with proxy vars if OPSEC egress is enabled.
+
+        Returns None if egress is disabled (subprocess inherits parent env).
+        """
+        opsec = self.config.get_opsec_config()
+        egress = opsec.get("egress", {})
+        if not egress.get("enabled"):
+            return None
+
+        import os
+        env = os.environ.copy()
+        ptype = egress.get("proxy_type", "socks5")
+        phost = egress.get("proxy_host", "127.0.0.1")
+        pport = egress.get("proxy_port", 9050)
+        proxy_url = f"{ptype}://{phost}:{pport}"
+        env["HTTP_PROXY"] = proxy_url
+        env["HTTPS_PROXY"] = proxy_url
+        env["ALL_PROXY"] = proxy_url
+        logger.debug("OPSEC: injecting proxy env %s for %s", proxy_url, self.name)
+        return env
+
     def run(
         self, target: str, timeout: int = DEFAULT_TIMEOUT, **kwargs
     ) -> ToolResult:
@@ -160,6 +182,7 @@ class BaseTool(ABC):
                 text=True,
                 timeout=timeout,
                 shell=False,
+                env=self._build_proxy_env(),
             )
             elapsed = time.time() - start
             raw = proc.stdout

@@ -12,6 +12,9 @@ import yaml
 DEFAULT_CONFIG_DIR = Path(__file__).resolve().parent.parent / "configs"
 DEFAULT_API_KEYS_FILE = DEFAULT_CONFIG_DIR / "api_keys.yaml"
 DEFAULT_PROFILES_FILE = DEFAULT_CONFIG_DIR / "scan_profiles.yaml"
+DEFAULT_TAKEOVER_PROVIDERS_FILE = DEFAULT_CONFIG_DIR / "takeover_providers.yaml"
+DEFAULT_PIPELINE_DEFAULTS_FILE = DEFAULT_CONFIG_DIR / "pipeline_defaults.yaml"
+DEFAULT_OPSEC_CONFIG_FILE = DEFAULT_CONFIG_DIR / "opsec.yaml"
 DEFAULT_RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 DEFAULT_TIMEOUT = 300  # seconds per tool
 DEFAULT_DORK_DELAY = 3.0  # seconds between Google dork queries
@@ -103,6 +106,43 @@ class Config:
         if token:
             return str(token)
         return os.environ.get(DEFAULT_MCP_TOKEN_ENV)
+
+    def get_takeover_providers(self) -> list[dict]:
+        """Load subdomain takeover provider fingerprints from config."""
+        if not hasattr(self, "_takeover_providers"):
+            path = DEFAULT_TAKEOVER_PROVIDERS_FILE
+            if path.exists():
+                with open(path) as f:
+                    data = yaml.safe_load(f) or {}
+                self._takeover_providers = data.get("providers", [])
+            else:
+                self._takeover_providers = []
+        return self._takeover_providers
+
+    def get_pipeline_config(self, pipeline: str) -> dict:
+        """Load pipeline-specific defaults from config.
+
+        Returns the config dict for the named pipeline, or empty dict if missing.
+        """
+        if not hasattr(self, "_pipeline_defaults"):
+            path = DEFAULT_PIPELINE_DEFAULTS_FILE
+            if path.exists():
+                with open(path) as f:
+                    self._pipeline_defaults = yaml.safe_load(f) or {}
+            else:
+                self._pipeline_defaults = {}
+        return dict(self._pipeline_defaults.get(pipeline, {}))
+
+    def get_opsec_config(self) -> dict:
+        """Load OPSEC/analyst protection configuration."""
+        if not hasattr(self, "_opsec_config"):
+            path = DEFAULT_OPSEC_CONFIG_FILE
+            if path.exists():
+                with open(path) as f:
+                    self._opsec_config = yaml.safe_load(f) or {}
+            else:
+                self._opsec_config = {}
+        return dict(self._opsec_config)
 
     def api_keys_file_exists(self) -> bool:
         return self.api_keys_path.exists()

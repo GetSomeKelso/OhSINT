@@ -7,6 +7,7 @@ from typing import List
 
 import httpx
 
+from src.http_client import OhSINTHTTPClient
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
@@ -64,7 +65,7 @@ class WhitepagesProTool(BaseTool):
         errors = []
 
         try:
-            with httpx.Client(timeout=timeout) as client:
+            with OhSINTHTTPClient(self.config, timeout=timeout) as client:
                 resp = client.get(
                     f"{WHITEPAGES_PRO_API}/phone",
                     params={"phone": phone},

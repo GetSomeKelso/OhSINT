@@ -37,6 +37,10 @@ class IntelType(str, Enum):
     REPUTATION = "reputation"
     PHONE_INFO = "phone_info"
     INFOSTEALER = "infostealer"
+    SUBDOMAIN_TAKEOVER = "subdomain_takeover"
+    LEAKED_SECRET = "leaked_secret"
+    JS_ENDPOINT = "js_endpoint"
+    EXPOSED_API_DOC = "exposed_api_doc"
 
 
 class ToolResult(BaseModel):
@@ -145,6 +149,12 @@ class ReconReport(BaseModel):
             grouped.setdefault(f.type.value, []).append(f)
 
         for intel_type, findings in sorted(grouped.items()):
+            if intel_type == "subdomain_takeover":
+                lines.extend(self._takeover_markdown(findings))
+                continue
+            if intel_type == "leaked_secret":
+                lines.extend(self._secret_markdown(findings))
+                continue
             lines.append(f"### {intel_type.replace('_', ' ').title()}")
             lines.append("")
             lines.append("| Value | Source | Confidence | Tags |")
@@ -157,6 +167,191 @@ class ReconReport(BaseModel):
             lines.append("")
 
         return "\n".join(lines)
+
+    def _takeover_markdown(self, findings: List[IntelFinding]) -> List[str]:
+        """Render subdomain takeover findings with impact assessment."""
+        lines = [
+            "### Subdomain Takeover Assessment",
+            "",
+            "| Subdomain | CNAME Target | Provider | Status | Severity | Confidence |",
+            "|-----------|-------------|----------|--------|----------|------------|",
+        ]
+        for f in sorted(findings, key=lambda x: -x.confidence):
+            rd = f.raw_data or {}
+            status = "Confirmed" if "confirmed" in f.tags else (
+                "Unconfirmed" if "unconfirmed" in f.tags else "CNAME-only"
+            )
+            lines.append(
+                f"| `{f.value}` | `{rd.get('cname_target', '?')}` "
+                f"| {rd.get('provider_name', '?')} | {status} "
+                f"| {rd.get('severity', '?')} | {f.confidence:.0%} |"
+            )
+        lines.append("")
+
+        confirmed = [f for f in findings if "confirmed" in f.tags]
+        if confirmed:
+            # Use the first confirmed finding for the impact template
+            apex = self.target.split(",")[0].strip() if self.target else "target.com"
+            lines.extend([
+                "#### Impact Assessment",
+                "",
+                "- **Content injection / phishing:** Attacker can serve arbitrary content on a "
+                "trusted company subdomain, enabling high-credibility phishing attacks.",
+                f"- **Cookie theft:** If the parent domain sets cookies scoped to `*.{apex}`, "
+                "attacker-controlled content can read those cookies, enabling session hijacking.",
+                "- **OAuth/CORS abuse (verify manually):** Check whether the affected subdomains "
+                "appear in OAuth redirect whitelists or CORS `Access-Control-Allow-Origin` headers.",
+                "",
+                "#### Proof of Concept (no resource claiming required)",
+                "",
+                "1. Screenshot of the fingerprint error response",
+                "2. DNS record showing the dangling CNAME (`dig CNAME <subdomain>`)",
+                "3. For most programs, steps 1+2 are sufficient without registering the resource",
+                "",
+                "#### Suggested Severity",
+                "",
+                "Medium to High depending on cookie scope and OAuth whitelist presence. "
+                "Escalate to Critical if session cookies are confirmed in scope.",
+                "",
+            ])
+
+        # PoC approaches per finding
+        poc_findings = [f for f in findings if (f.raw_data or {}).get("poc_approach")]
+        if poc_findings:
+            lines.extend(["#### PoC Approach per Finding", ""])
+            for f in poc_findings:
+                rd = f.raw_data or {}
+                lines.append(f"- **{f.value}** ({rd.get('provider_name', '?')}): {rd.get('poc_approach', '')}")
+            lines.append("")
+
+        return lines
+
+    def _takeover_html(self, findings: List[IntelFinding], html_mod) -> str:
+        """Render subdomain takeover findings as HTML with impact assessment."""
+        rows = ""
+        for f in sorted(findings, key=lambda x: -x.confidence):
+            rd = f.raw_data or {}
+            status = "Confirmed" if "confirmed" in f.tags else (
+                "Unconfirmed" if "unconfirmed" in f.tags else "CNAME-only"
+            )
+            sev = rd.get("severity", "?")
+            sev_color = {"high": "var(--red)", "critical": "var(--red)",
+                         "medium": "var(--yellow)", "low": "var(--text)"}.get(sev, "var(--text)")
+            status_color = {"Confirmed": "var(--red)", "Unconfirmed": "var(--yellow)",
+                            "CNAME-only": "var(--text)"}.get(status, "var(--text)")
+            rows += (
+                f"<tr><td><code>{html_mod.escape(f.value)}</code></td>"
+                f"<td><code>{html_mod.escape(rd.get('cname_target', '?'))}</code></td>"
+                f"<td>{html_mod.escape(rd.get('provider_name', '?'))}</td>"
+                f"<td style=\"color:{status_color};font-weight:600\">{status}</td>"
+                f"<td style=\"color:{sev_color}\">{sev}</td>"
+                f"<td>{f.confidence:.0%}</td>"
+                f"<td>{html_mod.escape(rd.get('poc_approach', '-'))}</td></tr>\n"
+            )
+
+        confirmed = [f for f in findings if "confirmed" in f.tags]
+        impact_html = ""
+        if confirmed:
+            apex = html_mod.escape(self.target.split(",")[0].strip()) if self.target else "target.com"
+            impact_html = f"""
+            <div style="background:rgba(248,81,73,0.08);border:1px solid var(--red);border-radius:6px;padding:1rem 1.5rem;margin:1rem 0">
+            <h4 style="color:var(--red);margin-bottom:0.5rem">Impact Assessment</h4>
+            <ul style="margin:0.5rem 0;padding-left:1.5rem">
+            <li><strong>Content injection / phishing:</strong> Attacker can serve arbitrary content on a trusted company subdomain.</li>
+            <li><strong>Cookie theft:</strong> If cookies are scoped to <code>*.{apex}</code>, session hijacking is possible.</li>
+            <li><strong>OAuth/CORS abuse:</strong> Verify whether affected subdomains appear in OAuth redirect whitelists or CORS headers.</li>
+            </ul>
+            <h4 style="color:var(--accent);margin:1rem 0 0.5rem">Proof of Concept</h4>
+            <ol style="margin:0.5rem 0;padding-left:1.5rem">
+            <li>Screenshot of the fingerprint error response</li>
+            <li>DNS record showing the dangling CNAME</li>
+            <li>Steps 1+2 are sufficient for most programs without claiming the resource</li>
+            </ol>
+            </div>
+            """
+
+        return f"""
+        <h3 style="color:var(--red)">Subdomain Takeover Assessment ({len(findings)})</h3>
+        <table>
+            <thead><tr>
+                <th>Subdomain</th><th>CNAME Target</th><th>Provider</th>
+                <th>Status</th><th>Severity</th><th>Confidence</th><th>PoC Approach</th>
+            </tr></thead>
+            <tbody>{rows}</tbody>
+        </table>
+        {impact_html}
+        """
+
+    def _secret_markdown(self, findings: List[IntelFinding]) -> List[str]:
+        """Render leaked secret findings with redacted previews."""
+        lines = [
+            "### Leaked Secret Discovery",
+            "",
+            "| Source | Secret Type | Redacted Preview | Verified | Platform | Confidence |",
+            "|--------|-------------|-----------------|----------|----------|------------|",
+        ]
+        for f in sorted(findings, key=lambda x: -x.confidence):
+            rd = f.raw_data or {}
+            verified = "Yes" if rd.get("verified") else "No"
+            lines.append(
+                f"| `{f.value[:60]}` | {rd.get('secret_type', '?')} "
+                f"| `{rd.get('raw_secret_redacted', '?')}` | {verified} "
+                f"| {rd.get('source_platform', '?')} | {f.confidence:.0%} |"
+            )
+        lines.append("")
+
+        verified_count = sum(1 for f in findings if (f.raw_data or {}).get("verified"))
+        if verified_count:
+            lines.extend([
+                "#### Blast Radius Assessment",
+                "",
+                "Verified secrets have been confirmed live by TruffleHog's `--only-verified` mode.",
+                "This performs a single non-destructive API check — it does NOT authenticate or exploit.",
+                "",
+            ])
+            for f in findings:
+                rd = f.raw_data or {}
+                if rd.get("verified") and rd.get("blast_radius_hint"):
+                    lines.append(f"- **{rd.get('secret_type', '?')}** at `{f.value[:40]}...`: {rd['blast_radius_hint']}")
+            lines.append("")
+
+        lines.extend([
+            "#### Recommendations",
+            "",
+            "1. Rotate all verified secrets immediately",
+            "2. Audit access logs for unauthorized usage during exposure window",
+            "3. Review commit history for additional exposed credentials",
+            "4. Never store raw secrets in findings — only redacted previews shown above",
+            "",
+        ])
+        return lines
+
+    def _secret_html(self, findings: List[IntelFinding], html_mod) -> str:
+        """Render leaked secret findings as HTML."""
+        rows = ""
+        for f in sorted(findings, key=lambda x: -x.confidence):
+            rd = f.raw_data or {}
+            verified = rd.get("verified", False)
+            v_badge = '<span style="color:var(--red);font-weight:600">VERIFIED</span>' if verified else '<span style="color:var(--text)">unverified</span>'
+            rows += (
+                f"<tr><td><code>{html_mod.escape(f.value[:60])}</code></td>"
+                f"<td>{html_mod.escape(rd.get('secret_type', '?'))}</td>"
+                f"<td><code>{html_mod.escape(rd.get('raw_secret_redacted', '?'))}</code></td>"
+                f"<td>{v_badge}</td>"
+                f"<td>{html_mod.escape(rd.get('source_platform', '?'))}</td>"
+                f"<td>{f.confidence:.0%}</td></tr>\n"
+            )
+
+        return f"""
+        <h3 style="color:var(--red)">Leaked Secret Discovery ({len(findings)})</h3>
+        <table>
+            <thead><tr>
+                <th>Source</th><th>Secret Type</th><th>Redacted Preview</th>
+                <th>Verified</th><th>Platform</th><th>Confidence</th>
+            </tr></thead>
+            <tbody>{rows}</tbody>
+        </table>
+        """
 
     def to_html(self) -> str:
         """Generate a styled HTML report with findings tables."""
@@ -175,6 +370,12 @@ class ReconReport(BaseModel):
 
         finding_sections = ""
         for intel_type, findings in sorted(grouped.items()):
+            if intel_type == "subdomain_takeover":
+                finding_sections += self._takeover_html(findings, html_mod)
+                continue
+            if intel_type == "leaked_secret":
+                finding_sections += self._secret_html(findings, html_mod)
+                continue
             label = intel_type.replace("_", " ").title()
             rows = ""
             for f in sorted(findings, key=lambda x: -x.confidence):

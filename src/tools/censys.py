@@ -7,6 +7,7 @@ from typing import List
 
 import httpx
 
+from src.http_client import OhSINTHTTPClient
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
@@ -66,10 +67,10 @@ class CensysTool(BaseTool):
             query = target
 
         try:
-            with httpx.Client(timeout=timeout, auth=auth) as client:
+            with OhSINTHTTPClient(self.config, timeout=timeout) as client:
                 if is_ip:
                     # Direct host lookup
-                    resp = client.get(f"{CENSYS_API_BASE}/hosts/{target}")
+                    resp = client.get(f"{CENSYS_API_BASE}/hosts/{target}", auth=auth)
                     resp.raise_for_status()
                     data = resp.json()
                     result_data = data.get("result", {})
@@ -109,6 +110,7 @@ class CensysTool(BaseTool):
                     resp = client.get(
                         f"{CENSYS_API_BASE}/hosts/search",
                         params={"q": query, "per_page": 25},
+                        auth=auth,
                     )
                     resp.raise_for_status()
                     data = resp.json()

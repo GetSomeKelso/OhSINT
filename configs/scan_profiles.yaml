@@ -191,3 +191,65 @@ people:
     - holehe
     - theharvester:
         sources: "linkedin,google,bing"
+
+subdomain_takeover:
+  description: "Subdomain takeover detection — enumerate subdomains, resolve CNAMEs, fingerprint dangling records"
+  tools:
+    - subfinder:
+        all_sources: true
+    - crtsh:
+        wildcard: true
+    - dnsx_cname
+    - subzy:
+        concurrency: 10
+    - nuclei_takeovers
+  notes: >
+    Detection only — does not claim resources or interact with provider accounts.
+    Uses dedicated TakeoverPipeline for sequential data-flow chaining.
+    Invoke via 'ohsint takeover' CLI command or osint_subdomain_takeover MCP tool.
+
+url_harvest:
+  description: "Historical URL harvesting — Wayback Machine, Common Crawl, OTX, pattern matching"
+  tools:
+    - gau:
+        subs: true
+        threads: 5
+    - waybackurls
+    - waymore:
+        mode: "U"
+    - gf_patterns
+  notes: >
+    Output feeds into js_analysis pipeline (js_urls.txt).
+    Invoke via 'ohsint url-harvest' CLI command or osint_url_harvest MCP tool.
+
+secret_surface:
+  description: "Secret surface discovery — GitHub, Docker Hub, Postman, TruffleHog, Gitleaks"
+  tools:
+    - github_code_search
+    - docker_hub_search
+    - postman_workspace_search
+    - trufflehog_github
+    - trufflehog_docker
+    - trufflehog_postman
+    - gitleaks
+  notes: >
+    TruffleHog --only-verified only. Never stores raw secrets.
+    Invoke via 'ohsint secret-surface' CLI command or osint_secret_surface MCP tool.
+
+js_analysis:
+  description: "JavaScript file analysis — endpoint extraction, secret detection, source maps"
+  tools:
+    - subjs
+    - getjs
+    - linkfinder
+    - secretfinder
+  notes: >
+    Accepts js_urls.txt from url_harvest as input.
+    Invoke via 'ohsint js-analysis' CLI command or osint_js_analysis MCP tool.
+
+osint_passive_full:
+  description: "Full passive OSINT — takeover + URL harvest + secret surface + JS analysis"
+  tools: []
+  notes: >
+    Chains all 4 passive pipelines with cross-pipeline data flow.
+    Estimated runtime: 30-90 minutes. Invoke via 'ohsint passive-full' or osint_passive_full.

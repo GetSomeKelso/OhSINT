@@ -2,7 +2,7 @@
 
 ## What This Is
 
-OhSINT is a unified OSINT reconnaissance orchestrator with 43 tools behind a CLI (`ohsint`) and MCP server (`ohsint-mcp`). It runs on a Kali Linux VM and connects to Claude Desktop/Code on a Windows host via SSE.
+OhSINT is a unified OSINT reconnaissance orchestrator with 60 tools behind a CLI (`ohsint`) and MCP server (`ohsint-mcp`). It runs on a Kali Linux VM and connects to Claude Desktop/Code on a Windows host via SSE.
 
 The operator (SheriffBart) is an IT Director / Security Architect / Penetration Tester who uses this tool for authorized engagements.
 
@@ -87,6 +87,30 @@ email found ──► holehe (platform registration check)
               ► hudson_rock (infostealer check)
 ```
 
+### Subdomain Takeover Detection Pipeline
+
+```
+domain(s) ──► subfinder + crt.sh (parallel subdomain enumeration)
+                  ▼
+              deduplicate subdomains
+                  ▼
+              dnsx_cname (CNAME resolution)
+                  ▼
+              filter by provider patterns (takeover_providers.yaml)
+                  ▼
+              subzy + nuclei takeover templates (parallel fingerprinting)
+                  ▼
+              cross-validate: both confirm → high confidence
+                              one only → medium confidence
+                              CNAME-only → low confidence
+                  ▼
+              report with impact assessment + PoC guidance
+```
+
+**CLI:** `ohsint takeover -t domain.com` (single) or `ohsint takeover --scope-file scope.txt` (multi-target)
+**MCP:** `osint_subdomain_takeover(domains="domain.com,other.com")`
+**Re-scan:** `ohsint takeover -t domain.com --re-scan results/previous/report.json`
+
 ### FCRA-Gated Identity Pipeline (requires --fcra-permissible-purpose)
 
 ```
@@ -158,6 +182,11 @@ When the user asks to "investigate", "validate", or "deep dive" on findings from
 | `phone` | 5 | No | Phone number recon — cheapest first |
 | `identity` | 7 | No | Phone + breach + platform check |
 | `commercial_identity` | 2 | **Yes + FCRA** | FCRA-gated commercial identity |
+| `subdomain_takeover` | 5 | No | Subdomain takeover detection pipeline |
+| `url_harvest` | 4 | No | Historical URL harvesting + pattern matching |
+| `secret_surface` | 7 | No | GitHub/Docker/Postman secret discovery |
+| `js_analysis` | 4 | No | JavaScript endpoint + secret analysis |
+| `osint_passive_full` | all | No | Full passive pipeline (all 4 combined) |
 
 ## API Keys
 

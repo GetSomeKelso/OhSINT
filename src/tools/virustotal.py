@@ -62,7 +62,8 @@ class VirusTotalTool(BaseTool):
         is_ip = bool(re.match(r'^\d{1,3}(\.\d{1,3}){3}$', target))
         endpoint = "ip_addresses" if is_ip else "domains"
 
-        with httpx.Client(timeout=timeout) as client:
+        from src.http_client import OhSINTHTTPClient
+        with OhSINTHTTPClient(self.config, timeout=timeout) as client:
             # 1. Main lookup — domain or IP
             try:
                 resp = client.get(f"{VT_API_BASE}/{endpoint}/{target}", headers=headers)

@@ -54,6 +54,103 @@
 - [x] Dockerfile updated with crosslinked, sherlock-project, InSpy, linkedin2username, LinkedInt, chromium
 - [x] api_keys.yaml.example updated with linkedin + hunter_io sections
 
+## Phase 7 — Subdomain Takeover Detection ✅
+- [x] SUBDOMAIN_TAKEOVER added to IntelType enum
+- [x] configs/takeover_providers.yaml — 17 provider fingerprint patterns
+- [x] Config.get_takeover_providers() method
+- [x] dnsx_cname.py — DNS CNAME resolution wrapper
+- [x] subzy.py — subdomain takeover fingerprinting wrapper
+- [x] nuclei_takeovers.py — nuclei takeover templates wrapper
+- [x] TakeoverPipeline — 5-stage sequential pipeline with parallel enumeration/fingerprinting
+- [x] scope_parser.py — HackerOne/Bugcrowd scope file parser with interactive selection
+- [x] Multi-target support: -t repeat, --targets-file, --scope-file
+- [x] Combined + per-domain report modes (--per-domain flag)
+- [x] --re-scan flag for delta detection against previous results
+- [x] Takeover-specific report rendering (markdown + HTML) with impact assessment
+- [x] CLI: ohsint takeover command with --dry-run support
+- [x] MCP: osint_subdomain_takeover, osint_dnsx_cname, osint_subzy, osint_nuclei_takeovers
+- [x] subdomain_takeover scan profile added to scan_profiles.yaml
+- [x] docs/tools.md updated with 3 new tools (46 total)
+- [x] CLAUDE.md updated with takeover pipeline docs
+- [ ] Install dnsx, subzy, nuclei on Kali VM
+- [ ] Integration test against known-safe target
+
+## Phase 8 — Pipeline A: Historical URL Harvesting ✅
+- [x] _url_classify.py — shared URL classification module (extracted from waymore)
+- [x] waymore.py refactored to use shared module
+- [x] gau.py — URL harvester (Go binary wrapper)
+- [x] waybackurls.py — Wayback URL collector
+- [x] gf_patterns.py — gf pattern matcher (stdin-based, auto-copies patterns)
+- [x] configs/gf_patterns/ — 5 pattern files (redirect, aws-keys, s3-buckets, secrets, interestingparams)
+- [x] UrlHarvestPipeline — 5-stage: enumerate → merge → gf match → JS extract → robots.txt history
+- [x] CLI: ohsint url-harvest command
+- [x] MCP: osint_url_harvest, osint_gau, osint_waybackurls
+- [x] url_harvest scan profile
+- [ ] Install gau, waybackurls, gf, waymore on Kali VM
+- [ ] Integration test
+
+## Phase 9 — Pipeline B: Secret Surface Discovery ✅
+- [x] github_code_search.py — GitHub Search API for secret-focused queries
+- [x] trufflehog_github.py — TruffleHog GitHub org scanner
+- [x] trufflehog_docker.py — TruffleHog Docker image scanner
+- [x] trufflehog_postman.py — TruffleHog Postman workspace scanner
+- [x] gitleaks.py — Gitleaks regex-based secret scanner
+- [x] docker_hub_search.py — Docker Hub public image discovery
+- [x] postman_workspace_search.py — Postman public workspace discovery
+- [x] SecretSurfacePipeline — 6-stage: discover → TruffleHog verify → Gitleaks → cross-validate
+- [x] LEAKED_SECRET IntelType + secret report rendering (markdown + HTML)
+- [x] CLI: ohsint secret-surface command
+- [x] MCP: osint_secret_surface, osint_github_code_search, osint_trufflehog_github, etc.
+- [x] secret_surface scan profile
+- [ ] Install trufflehog, gitleaks on Kali VM
+- [ ] Integration test
+
+## Phase 10 — Pipeline C: JavaScript File Analysis ✅
+- [x] subjs.py — JS URL crawler (stdin-based)
+- [x] getjs.py — JS URL collector for SPAs
+- [x] linkfinder_tool.py — JS endpoint extractor
+- [x] secretfinder_tool.py — JS secret extractor
+- [x] JsAnalysisPipeline — 7-stage: collect → download → beautify → sourcemaps → analyze → TruffleHog → Swagger
+- [x] JS_ENDPOINT + EXPOSED_API_DOC IntelTypes
+- [x] CLI: ohsint js-analysis command
+- [x] MCP: osint_js_analysis, osint_linkfinder
+- [x] js_analysis scan profile
+- [ ] Install subjs, getjs, js-beautify, linkfinder, SecretFinder on Kali VM
+- [ ] Integration test
+
+## Phase 11 — Full Passive Pipeline ✅
+- [x] PassiveFullPipeline — chains takeover + url_harvest + secret_surface + js_analysis
+- [x] Parallel phase 1 (takeover + url_harvest + secret_surface), sequential phase 2 (js_analysis)
+- [x] Report merging + deduplication across pipelines
+- [x] CLI: ohsint passive-full command (with --skip-takeover)
+- [x] MCP: osint_passive_full
+- [x] osint_passive_full scan profile
+- [x] configs/pipeline_defaults.yaml — pipeline configuration
+- [x] 60 total tools registered, 5 pipelines
+- [ ] Full integration test on Kali VM
+
+## Phase 12 — OPSEC / Analyst Protection Layer ✅
+- [x] configs/opsec.yaml — UA pool, rate limits, proxy config, session isolation
+- [x] src/http_client.py — OhSINTHTTPClient with UA rotation, rate limiting, proxy, cookie suppression
+- [x] Config.get_opsec_config() method
+- [x] Refactored all 14 HTTP tools + pipelines to use OhSINTHTTPClient (zero bare httpx.Client remaining)
+- [x] base.py modified — _build_proxy_env() injects proxy env vars into subprocess.run()
+- [x] github_dorks, trufflehog_github, trufflehog_postman updated to use _build_proxy_env()
+- [x] CLI: ohsint opsec-check command (UA status, proxy test, session config)
+- [x] Session isolation: random suffix on output directories
+- [x] docs/kasm-deployment.md — Kasm Workspaces deployment guide
+- [ ] Tor connectivity test on Kali VM
+
+## Kali VM — Batch Install (all outstanding)
+- [ ] Takeover: dnsx, subzy, nuclei, nuclei-templates
+- [ ] Pipeline A: gau, waybackurls, gf, waymore
+- [ ] Pipeline B: trufflehog, gitleaks
+- [ ] Pipeline C: subjs, getjs, js-beautify, linkfinder, SecretFinder
+- [ ] Tor: sudo apt install tor
+- [ ] Run ohsint install-check — verify all 60 tools
+- [ ] Run ohsint opsec-check — verify OPSEC config
+- [ ] Integration test all 5 pipelines against test domain
+
 ## Phase 6 — Polish ✅
 - [x] Rich CLI output (tables, progress bars, spinners)
 - [x] --dry-run flag

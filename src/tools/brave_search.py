@@ -10,6 +10,7 @@ from typing import List, Optional
 import httpx
 
 from src.config import DEFAULT_DORK_DELAY
+from src.http_client import OhSINTHTTPClient
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
@@ -93,7 +94,7 @@ class BraveSearch(BaseTool):
             "X-Subscription-Token": api_key,
         }
 
-        with httpx.Client(timeout=timeout) as client:
+        with OhSINTHTTPClient(self.config, timeout=timeout) as client:
             for category, query_template in queries.items():
                 query = query_template.format(domain=target)
                 try:

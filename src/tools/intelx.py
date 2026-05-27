@@ -7,6 +7,7 @@ from typing import List
 
 import httpx
 
+from src.http_client import OhSINTHTTPClient
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
@@ -51,7 +52,7 @@ class IntelXTool(BaseTool):
         headers = {"x-key": api_key, "Content-Type": "application/json"}
 
         try:
-            with httpx.Client(timeout=timeout) as client:
+            with OhSINTHTTPClient(self.config, timeout=timeout) as client:
                 # Step 1: Submit search
                 search_resp = client.post(
                     f"{INTELX_API_BASE}/intelligent/search",

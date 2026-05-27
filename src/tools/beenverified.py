@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import List
 
+import httpx
+
 from src.models import IntelType, ToolResult
 from src.registry import register_tool
 from src.target import TargetType
@@ -33,7 +35,7 @@ class BeenVerifiedTool(BaseTool):
 
     def run(self, target: str, timeout: int = 300, **kwargs) -> ToolResult:
         import time as _time
-        import httpx
+        from src.http_client import OhSINTHTTPClient
 
         # Defense-in-depth: FCRA check at tool level (also enforced by CLI/MCP gates)
         if not kwargs.get("fcra_purpose"):
@@ -65,7 +67,7 @@ class BeenVerifiedTool(BaseTool):
         headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
 
         try:
-            with httpx.Client(timeout=timeout) as client:
+            with OhSINTHTTPClient(self.config, timeout=timeout) as client:
                 resp = client.get(
                     f"{api_base}/search",
                     headers=headers,

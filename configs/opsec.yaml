@@ -1,0 +1,41 @@
+# OhSINT OPSEC / Analyst Protection Configuration
+# All settings default to safe/off — opt-in to enable
+
+request_hygiene:
+  rotate_user_agent: true
+  user_agents:
+    # Keep this list updated — pull from whatismybrowser.com top agents
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.4; rv:125.0) Gecko/20100101 Firefox/125.0"
+  request_delay_min_seconds: 1.0
+  request_delay_max_seconds: 3.0
+  randomize_delay: true
+  cookies_disabled: true
+
+  rate_limits:
+    default_rpm: 10
+    per_host:
+      "crt.sh": 2
+      "web.archive.org": 5
+      "api.github.com": 30
+      "hub.docker.com": 20
+      "api.postman.com": 10
+      "api.ipify.org": 5
+
+egress:
+  enabled: false
+  proxy_type: "socks5"    # socks5 | http | tor
+  proxy_host: "127.0.0.1"
+  proxy_port: 9050        # Tor default; change for commercial proxy
+  proxy_username: ""      # optional, for authenticated proxies
+  proxy_password: ""      # optional
+  dns_over_proxy: true    # for socks5, use remote DNS resolution
+
+session:
+  output_base_dir: "results"
+  random_suffix: true
+  auto_archive: false
+  archive_format: "tar.gz"

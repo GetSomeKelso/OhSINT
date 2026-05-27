@@ -858,6 +858,280 @@ async def osint_people_recon(
 
 
 # ---------------------------------------------------------------------------
+# Subdomain takeover detection
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_subdomain_takeover(
+    domains: str,
+    re_scan_path: str = "",
+    authorization_confirmed: bool = False,
+    per_domain: bool = False,
+    max_subdomains: int = 5000,
+) -> str:
+    """Detect subdomain takeover vulnerabilities for one or more domains.
+
+    Pipeline: enumerate subdomains (subfinder + crt.sh) → resolve CNAMEs (dnsx) →
+    filter by provider patterns → fingerprint (subzy + nuclei) → cross-validate.
+
+    Detection only — does not claim resources or interact with provider accounts.
+
+    Args:
+        domains: comma-separated domain list (e.g. "hilton.com,hilton.io")
+        re_scan_path: optional path to previous report.json to skip enumeration
+        per_domain: if True, return findings grouped per domain
+        max_subdomains: cap on total subdomains to process
+    """
+    _require_auth(authorization_confirmed)
+    start = _time.time()
+
+    domain_list = [d.strip().lower() for d in domains.split(",") if d.strip()]
+    if not domain_list:
+        raise ValueError("No domains provided. Pass comma-separated domain list.")
+
+    try:
+        from src.pipelines.takeover import TakeoverPipeline
+
+        pipeline = TakeoverPipeline(
+            config=_get_config(),
+            timeout=DEFAULT_TIMEOUT,
+            verbose=True,
+        )
+
+        re_path = Path(re_scan_path) if re_scan_path else None
+
+        report = await asyncio.to_thread(
+            pipeline.run, domain_list, re_path, max_subdomains,
+        )
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = DEFAULT_RESULTS_DIR / f"takeover_{timestamp}"
+        save_report(report, output_dir, "all")
+
+        _audit_log(
+            "subdomain_takeover", domains, authorization_confirmed,
+            True, _time.time() - start,
+        )
+        return report.to_markdown()
+    except Exception as exc:
+        _audit_log(
+            "subdomain_takeover", domains, authorization_confirmed,
+            False, _time.time() - start, str(exc),
+        )
+        raise
+
+
+@mcp.tool()
+async def osint_dnsx_cname(
+    domain: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Resolve DNS CNAME records for a domain to identify dangling records."""
+    return await _run_tool_audited("dnsx_cname", domain, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_subzy(
+    domain: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Check subdomains for takeover vulnerabilities via provider fingerprints."""
+    return await _run_tool_audited("subzy", domain, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_nuclei_takeovers(
+    domain: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Run nuclei takeover templates against a domain for fingerprint validation."""
+    return await _run_tool_audited("nuclei_takeovers", domain, authorization_confirmed)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline A — Historical URL Harvesting
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_url_harvest(
+    domains: str,
+    authorization_confirmed: bool = False,
+    max_urls: int = 500000,
+) -> str:
+    """Harvest historical URLs from Wayback Machine, Common Crawl, OTX, URLScan.
+
+    Collects URLs, deduplicates, runs pattern matching (redirects, secrets, S3 buckets),
+    extracts JS URLs for downstream analysis, and mines robots.txt history.
+
+    Args:
+        domains: comma-separated domain list
+        max_urls: cap on total URLs to process
+    """
+    _require_auth(authorization_confirmed)
+    start = _time.time()
+    domain_list = [d.strip().lower() for d in domains.split(",") if d.strip()]
+    try:
+        from src.pipelines.url_harvest import UrlHarvestPipeline
+        pipeline = UrlHarvestPipeline(config=_get_config(), timeout=DEFAULT_TIMEOUT, verbose=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = DEFAULT_RESULTS_DIR / f"url_harvest_{timestamp}"
+        report = await asyncio.to_thread(pipeline.run, domain_list, max_urls, output_dir)
+        save_report(report, output_dir, "all")
+        _audit_log("url_harvest", domains, authorization_confirmed, True, _time.time() - start)
+        return report.to_markdown()
+    except Exception as exc:
+        _audit_log("url_harvest", domains, authorization_confirmed, False, _time.time() - start, str(exc))
+        raise
+
+
+@mcp.tool()
+async def osint_gau(domain: str, authorization_confirmed: bool = False) -> str:
+    """Fetch known URLs from Wayback Machine, Common Crawl, OTX, URLScan."""
+    return await _run_tool_audited("gau", domain, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_waybackurls(domain: str, authorization_confirmed: bool = False) -> str:
+    """Fetch all URLs from the Wayback Machine for a domain."""
+    return await _run_tool_audited("waybackurls", domain, authorization_confirmed)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline B — Secret Surface Discovery
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_secret_surface(
+    domains: str,
+    authorization_confirmed: bool = False,
+) -> str:
+    """Discover leaked secrets across GitHub, Docker Hub, and Postman.
+
+    Searches public repos, container images, and API workspaces. Verifies secrets
+    with TruffleHog --only-verified. Never stores raw secrets.
+
+    Args:
+        domains: comma-separated domain/org list
+    """
+    _require_auth(authorization_confirmed)
+    start = _time.time()
+    domain_list = [d.strip().lower() for d in domains.split(",") if d.strip()]
+    try:
+        from src.pipelines.secret_surface import SecretSurfacePipeline
+        pipeline = SecretSurfacePipeline(config=_get_config(), timeout=DEFAULT_TIMEOUT, verbose=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = DEFAULT_RESULTS_DIR / f"secret_surface_{timestamp}"
+        report = await asyncio.to_thread(pipeline.run, domain_list)
+        save_report(report, output_dir, "all")
+        _audit_log("secret_surface", domains, authorization_confirmed, True, _time.time() - start)
+        return report.to_markdown()
+    except Exception as exc:
+        _audit_log("secret_surface", domains, authorization_confirmed, False, _time.time() - start, str(exc))
+        raise
+
+
+@mcp.tool()
+async def osint_github_code_search(domain: str, authorization_confirmed: bool = False) -> str:
+    """Search GitHub for leaked secrets and sensitive files in public repos."""
+    return await _run_tool_audited("github_code_search", domain, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_trufflehog_github(org: str, authorization_confirmed: bool = False) -> str:
+    """Scan a GitHub org for verified leaked secrets with TruffleHog."""
+    return await _run_tool_audited("trufflehog_github", org, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_docker_hub_search(org: str, authorization_confirmed: bool = False) -> str:
+    """Search Docker Hub for an org's public container images."""
+    return await _run_tool_audited("docker_hub_search", org, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_gitleaks(target: str, authorization_confirmed: bool = False) -> str:
+    """Run Gitleaks regex-based secret scanner against a target."""
+    return await _run_tool_audited("gitleaks", target, authorization_confirmed)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline C — JavaScript File Analysis
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_js_analysis(
+    domains: str,
+    js_urls_file: str = "",
+    authorization_confirmed: bool = False,
+) -> str:
+    """Analyze JavaScript files for endpoints, secrets, and source maps.
+
+    Collects JS URLs, downloads and beautifies files, runs LinkFinder + SecretFinder,
+    TruffleHog filesystem scan, and checks for Swagger/OpenAPI docs.
+
+    Args:
+        domains: comma-separated domain list
+        js_urls_file: optional path to js_urls.txt from url_harvest pipeline
+    """
+    _require_auth(authorization_confirmed)
+    start = _time.time()
+    domain_list = [d.strip().lower() for d in domains.split(",") if d.strip()]
+    try:
+        from src.pipelines.js_analysis import JsAnalysisPipeline
+        pipeline = JsAnalysisPipeline(config=_get_config(), timeout=DEFAULT_TIMEOUT, verbose=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = DEFAULT_RESULTS_DIR / f"js_analysis_{timestamp}"
+        report = await asyncio.to_thread(
+            pipeline.run, domain_list, js_urls_file or None, output_dir,
+        )
+        save_report(report, output_dir, "all")
+        _audit_log("js_analysis", domains, authorization_confirmed, True, _time.time() - start)
+        return report.to_markdown()
+    except Exception as exc:
+        _audit_log("js_analysis", domains, authorization_confirmed, False, _time.time() - start, str(exc))
+        raise
+
+
+@mcp.tool()
+async def osint_linkfinder(target: str, authorization_confirmed: bool = False) -> str:
+    """Extract endpoints and API paths from a JavaScript file."""
+    return await _run_tool_audited("linkfinder", target, authorization_confirmed)
+
+
+# ---------------------------------------------------------------------------
+# Full Passive Pipeline
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_passive_full(
+    domains: str,
+    authorization_confirmed: bool = False,
+    skip_takeover: bool = False,
+) -> str:
+    """Run full passive OSINT: takeover + URL harvest + secret surface + JS analysis.
+
+    Chains all passive pipelines with cross-pipeline data flow.
+    Estimated runtime: 30-90 minutes depending on target size.
+
+    Args:
+        domains: comma-separated domain list
+        skip_takeover: skip subdomain takeover pipeline
+    """
+    _require_auth(authorization_confirmed)
+    start = _time.time()
+    domain_list = [d.strip().lower() for d in domains.split(",") if d.strip()]
+    try:
+        from src.pipelines.passive_full import PassiveFullPipeline
+        pipeline = PassiveFullPipeline(config=_get_config(), timeout=DEFAULT_TIMEOUT, verbose=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = DEFAULT_RESULTS_DIR / f"passive_full_{timestamp}"
+        report = await asyncio.to_thread(
+            pipeline.run, domain_list, output_dir, skip_takeover,
+        )
+        save_report(report, output_dir, "all")
+        _audit_log("passive_full", domains, authorization_confirmed, True, _time.time() - start)
+        return report.to_markdown()
+    except Exception as exc:
+        _audit_log("passive_full", domains, authorization_confirmed, False, _time.time() - start, str(exc))
+        raise
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 def _format_result(result: Any) -> str:

@@ -17,6 +17,11 @@ from src.tools.crtsh import CrtSh
 from src.tools.subfinder import Subfinder
 from src.tools.whois_tool import WhoisTool
 
+# Subdomain takeover detection
+from src.tools.dnsx_cname import DnsxCname
+from src.tools.subzy import SubzyTool
+from src.tools.nuclei_takeovers import NucleiTakeovers
+
 # Threat intel & breach data
 from src.tools.virustotal import VirusTotalTool
 from src.tools.h8mail import H8mail
@@ -54,6 +59,26 @@ from src.tools.linkedin2username import LinkedIn2Username
 from src.tools.sherlock_tool import SherlockTool
 from src.tools.linkedint import LinkedInt
 
+# Pipeline A — Historical URL Harvesting
+from src.tools.gau import Gau
+from src.tools.waybackurls import Waybackurls
+from src.tools.gf_patterns import GfPatterns
+
+# Pipeline B — Secret Surface Discovery
+from src.tools.github_code_search import GithubCodeSearch
+from src.tools.trufflehog_github import TrufflehogGithub
+from src.tools.trufflehog_docker import TrufflehogDocker
+from src.tools.trufflehog_postman import TrufflehogPostman
+from src.tools.gitleaks import Gitleaks
+from src.tools.docker_hub_search import DockerHubSearch
+from src.tools.postman_workspace_search import PostmanWorkspaceSearch
+
+# Pipeline C — JavaScript File Analysis
+from src.tools.subjs import Subjs
+from src.tools.getjs import GetJs
+from src.tools.linkfinder_tool import LinkFinderTool
+from src.tools.secretfinder_tool import SecretFinderTool
+
 # Tier 2 — CLI-Compatible, May Need Wrapper Logic
 from src.tools.xray import XRay
 from src.tools.goodork import GooDork
@@ -78,6 +103,10 @@ __all__ = [
     # Passive infrastructure
     "Subfinder",
     "WhoisTool",
+    # Subdomain takeover detection
+    "DnsxCname",
+    "SubzyTool",
+    "NucleiTakeovers",
     # Threat intel & breach data
     "VirusTotalTool",
     "H8mail",
@@ -110,6 +139,23 @@ __all__ = [
     "TracersTool",
     "IdiTool",
     "SmartMoveTool",
+    # Pipeline A — URL Harvesting
+    "Gau",
+    "Waybackurls",
+    "GfPatterns",
+    # Pipeline B — Secret Surface
+    "GithubCodeSearch",
+    "TrufflehogGithub",
+    "TrufflehogDocker",
+    "TrufflehogPostman",
+    "Gitleaks",
+    "DockerHubSearch",
+    "PostmanWorkspaceSearch",
+    # Pipeline C — JS Analysis
+    "Subjs",
+    "GetJs",
+    "LinkFinderTool",
+    "SecretFinderTool",
     # LinkedIn / People Recon
     "CrossLinked",
     "InSpy",

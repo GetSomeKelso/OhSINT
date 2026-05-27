@@ -1,0 +1,4 @@
+{
+    "flags": "-HnrE",
+    "pattern": "(debug|test|admin|preview|internal|staging|dev|verbose|trace|config|setup|install|backup|dump|export|import|reset|delete|remove|drop|execute|exec|run|eval|cmd|command|shell|system|upload|download)="
+}
