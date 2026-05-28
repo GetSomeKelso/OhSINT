@@ -147,9 +147,23 @@
 - [ ] Pipeline B: trufflehog, gitleaks
 - [ ] Pipeline C: subjs, getjs, js-beautify, linkfinder, SecretFinder
 - [ ] Tor: sudo apt install tor
-- [ ] Run ohsint install-check — verify all 60 tools
+- [ ] PD passive: katana, uncover, tlsx, asnmap, cdncheck, urlfinder, cvemap, alterx, notify
+- [ ] PD active: httpx, naabu, shuffledns, interactsh-client
+- [ ] Run ohsint install-check — verify all 73 tools
 - [ ] Run ohsint opsec-check — verify OPSEC config
 - [ ] Integration test all 5 pipelines against test domain
+
+## Phase 13 — ProjectDiscovery Tool Integration ✅
+- [x] 9 passive PD tools: katana, uncover, tlsx, asnmap, cdncheck, urlfinder, cvemap, alterx, notify
+- [x] 4 active PD tools: httpx, naabu, shuffledns, interactsh (gated behind --authorization)
+- [x] All 13 registered in __init__.py (73 total tools)
+- [x] infrastructure profile updated (+uncover, tlsx, asnmap, cdncheck, alterx)
+- [x] threat-intel profile updated (+cvemap)
+- [x] active profile updated (+httpx, naabu, shuffledns, katana)
+- [x] 13 MCP endpoints added
+- [x] 116 tests passing
+- [ ] Install all 13 Go binaries on Kali VM
+- [ ] Integration test
 
 ## Phase 6 — Polish ✅
 - [x] Rich CLI output (tables, progress bars, spinners)

@@ -79,6 +79,23 @@ from src.tools.getjs import GetJs
 from src.tools.linkfinder_tool import LinkFinderTool
 from src.tools.secretfinder_tool import SecretFinderTool
 
+# ProjectDiscovery — Passive
+from src.tools.katana_tool import KatanaTool
+from src.tools.uncover_tool import UncoverTool
+from src.tools.tlsx_tool import TlsxTool
+from src.tools.asnmap_tool import AsnmapTool
+from src.tools.cdncheck_tool import CdncheckTool
+from src.tools.urlfinder_tool import UrlfinderTool
+from src.tools.cvemap_tool import CvemapTool
+from src.tools.alterx_tool import AlterxTool
+from src.tools.notify_tool import NotifyTool
+
+# ProjectDiscovery — Active
+from src.tools.httpx_tool import HttpxTool
+from src.tools.naabu_tool import NaabuTool
+from src.tools.shuffledns_tool import ShufflednsTool
+from src.tools.interactsh_tool import InteractshTool
+
 # Tier 2 — CLI-Compatible, May Need Wrapper Logic
 from src.tools.xray import XRay
 from src.tools.goodork import GooDork
@@ -156,6 +173,21 @@ __all__ = [
     "GetJs",
     "LinkFinderTool",
     "SecretFinderTool",
+    # ProjectDiscovery — Passive
+    "KatanaTool",
+    "UncoverTool",
+    "TlsxTool",
+    "AsnmapTool",
+    "CdncheckTool",
+    "UrlfinderTool",
+    "CvemapTool",
+    "AlterxTool",
+    "NotifyTool",
+    # ProjectDiscovery — Active
+    "HttpxTool",
+    "NaabuTool",
+    "ShufflednsTool",
+    "InteractshTool",
     # LinkedIn / People Recon
     "CrossLinked",
     "InSpy",

@@ -74,6 +74,14 @@ active:
         sleep: 3
     - linkedint:
         mode: "full"
+    - httpx:
+        follow_redirects: true
+    - naabu:
+        top_ports: "1000"
+    - shuffledns
+    - katana:
+        headless: true
+        depth: 3
 
 full:
   description: "All 28 tools — passive + active combined"
@@ -118,7 +126,7 @@ commercial_identity:
     - beenverified
 
 infrastructure:
-  description: "Passive domain and infrastructure intelligence — subdomains, certificates, WHOIS, DNS"
+  description: "Passive domain and infrastructure intelligence — subdomains, certificates, WHOIS, DNS, ASN, CDN"
   tools:
     - subfinder:
         all_sources: true
@@ -131,9 +139,15 @@ infrastructure:
         mode: "search"
     - brave_search:
         queries: "subdomains"
+    - uncover:
+        engines: "shodan,censys"
+    - tlsx
+    - asnmap
+    - cdncheck
+    - alterx
 
 threat-intel:
-  description: "Threat intelligence and breach exposure — reputation, breaches, archived attack surface"
+  description: "Threat intelligence and breach exposure — reputation, breaches, archived attack surface, CVEs"
   tools:
     - virustotal
     - h8mail
@@ -141,6 +155,8 @@ threat-intel:
         mode: "U"
     - shodan:
         mode: "search"
+    - cvemap:
+        severity: "critical,high"
 
 metadata:
   description: "Document and metadata focused recon"

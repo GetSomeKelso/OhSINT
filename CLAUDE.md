@@ -2,7 +2,7 @@
 
 ## What This Is
 
-OhSINT is a unified OSINT reconnaissance orchestrator with 60 tools behind a CLI (`ohsint`) and MCP server (`ohsint-mcp`). It runs on a Kali Linux VM and connects to Claude Desktop/Code on a Windows host via SSE.
+OhSINT is a unified OSINT reconnaissance orchestrator with 73 tools behind a CLI (`ohsint`) and MCP server (`ohsint-mcp`). It runs on a Kali Linux VM and connects to Claude Desktop/Code on a Windows host via SSE.
 
 The operator (SheriffBart) is an IT Director / Security Architect / Penetration Tester who uses this tool for authorized engagements.
 
@@ -172,7 +172,7 @@ When the user asks to "investigate", "validate", or "deep dive" on findings from
 |---------|-------|------|----------|
 | `standard` | 15 | No | Default quick scan |
 | `passive` | 30 | No | Comprehensive passive — all passive tools |
-| `active` | 5 | **Yes** | Active tools only |
+| `active` | 9 | **Yes** | Active tools only (+ httpx, naabu, shuffledns, katana) |
 | `full` | 43 | **Yes** | Everything — passive + active |
 | `infrastructure` | 6 | No | Domain-focused — subdomains, certs, WHOIS |
 | `threat-intel` | 4 | No | Reputation, breaches, archives |

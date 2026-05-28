@@ -1095,6 +1095,84 @@ async def osint_linkfinder(target: str, authorization_confirmed: bool = False) -
 
 
 # ---------------------------------------------------------------------------
+# ProjectDiscovery — Passive
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_katana(target: str, authorization_confirmed: bool = False) -> str:
+    """Crawl a target for JS files, endpoints, forms, and tech stack."""
+    return await _run_tool_audited("katana", target, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_uncover(target: str, engines: str = "shodan,censys", authorization_confirmed: bool = False) -> str:
+    """Search Shodan, Censys, Fofa, Hunter, ZoomEye, Netlas in one query."""
+    return await _run_tool_audited("uncover", target, authorization_confirmed, engines=engines)
+
+
+@mcp.tool()
+async def osint_tlsx(target: str, authorization_confirmed: bool = False) -> str:
+    """Grab TLS certificate data — SANs, ciphers, JARM hash, expiry."""
+    return await _run_tool_audited("tlsx", target, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_asnmap(target: str, authorization_confirmed: bool = False) -> str:
+    """Map org name, domain, or IP to ASN numbers and CIDR ranges."""
+    return await _run_tool_audited("asnmap", target, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_cdncheck(target: str, authorization_confirmed: bool = False) -> str:
+    """Detect CDN, WAF, and cloud providers for an IP or domain."""
+    return await _run_tool_audited("cdncheck", target, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_urlfinder(domain: str, authorization_confirmed: bool = False) -> str:
+    """Passively gather URLs from web pages for a domain."""
+    return await _run_tool_audited("urlfinder", domain, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_cvemap(target: str, severity: str = "critical,high", authorization_confirmed: bool = False) -> str:
+    """Look up CVEs with EPSS scores, KEV status, and exploit references."""
+    return await _run_tool_audited("cvemap", target, authorization_confirmed, severity=severity)
+
+
+@mcp.tool()
+async def osint_alterx(domain: str, authorization_confirmed: bool = False) -> str:
+    """Generate subdomain permutation wordlists via DSL patterns."""
+    return await _run_tool_audited("alterx", domain, authorization_confirmed)
+
+
+# ---------------------------------------------------------------------------
+# ProjectDiscovery — Active (require authorization)
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_httpx(target: str, authorization_confirmed: bool = False) -> str:
+    """Probe hosts for HTTP status, titles, tech stack, and headers. Requires authorization."""
+    return await _run_tool_audited("httpx", target, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_naabu(target: str, top_ports: str = "100", authorization_confirmed: bool = False) -> str:
+    """Fast port scan — SYN/CONNECT modes. Requires authorization."""
+    return await _run_tool_audited("naabu", target, authorization_confirmed, top_ports=top_ports)
+
+
+@mcp.tool()
+async def osint_shuffledns(domain: str, authorization_confirmed: bool = False) -> str:
+    """DNS brute-force with wildcard filtering. Requires authorization."""
+    return await _run_tool_audited("shuffledns", domain, authorization_confirmed)
+
+
+@mcp.tool()
+async def osint_interactsh(target: str = "generate", authorization_confirmed: bool = False) -> str:
+    """Generate OOB interaction URLs for blind vulnerability testing. Requires authorization."""
+    return await _run_tool_audited("interactsh", target, authorization_confirmed)
+
+
+# ---------------------------------------------------------------------------
 # Full Passive Pipeline
 # ---------------------------------------------------------------------------
 @mcp.tool()
