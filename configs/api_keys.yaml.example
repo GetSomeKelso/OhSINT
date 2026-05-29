@@ -1,6 +1,10 @@
 # OhSINT — API Key Configuration
 # Copy this file to api_keys.yaml and fill in your keys.
 # NEVER commit api_keys.yaml to version control.
+#
+# Wordlist / data-source filesystem paths (SecLists, n0kovo) are NOT secrets —
+# they live in configs/paths.yaml (committed) and resolve via config file →
+# OHSINT_SECLISTS_PATH / OHSINT_WORDLISTS_PATH env vars → defaults.
 
 mcp_server:
   # Bearer token for MCP SSE authentication (MCP07)

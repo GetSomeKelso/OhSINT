@@ -44,6 +44,7 @@ class TakeoverPipeline:
         targets: list[str],
         re_scan_path: Optional[Path] = None,
         max_subdomains: int = 5000,
+        dns_bruteforce: bool = False,
     ) -> ReconReport:
         """Run the full takeover detection pipeline against one or more domains."""
         start_time = datetime.now(timezone.utc)
@@ -71,6 +72,25 @@ class TakeoverPipeline:
                     subdomains = sorted(subdomains)[:max_subdomains]
 
                 console.print(f"  [green]✓[/green] {len(subdomains)} unique subdomains found")
+
+            # Stage 1b: Optional n0kovo DNS brute-force (off by default)
+            if dns_bruteforce and not re_scan_path:
+                bf_subs, bf_exec, bf_fail = self._dns_bruteforce(targets, subdomains, parent_map)
+                tools_executed.extend(bf_exec)
+                tools_failed.extend(bf_fail)
+                if bf_subs:
+                    before = len(subdomains)
+                    subdomains |= bf_subs  # merge + dedup (set union)
+                    console.print(
+                        f"  [green]✓[/green] DNS brute-force added {len(subdomains) - before} "
+                        f"new subdomains ({len(subdomains)} total)"
+                    )
+                    if len(subdomains) > max_subdomains:
+                        console.print(
+                            f"  [yellow]⚠[/yellow] Truncating {len(subdomains)} subdomains "
+                            f"to {max_subdomains}"
+                        )
+                        subdomains = set(sorted(subdomains)[:max_subdomains])
 
             if not subdomains:
                 console.print("[yellow]No subdomains found — nothing to check.[/yellow]")
@@ -171,6 +191,19 @@ class TakeoverPipeline:
                 "installed": tool.is_installed(),
                 "command": " ".join(cmd) if cmd else "(API-based)",
             })
+
+        # Optional n0kovo DNS brute-force (only runs with --dns-bruteforce)
+        bf_cfg = (self.config.get_profile("subdomain_takeover") or {}).get(
+            "optional_dns_bruteforce", {}
+        )
+        wl = self.config.resolve_path_tokens(bf_cfg.get("wordlist", ""))
+        conc = bf_cfg.get("concurrency", 100)
+        dom = targets[0] if targets else "<domain>"
+        tools_info.append({
+            "name": "dnsx (n0kovo brute-force, --dns-bruteforce)",
+            "installed": bool(wl) and os.path.isfile(wl),
+            "command": f"dnsx -d {dom} -w {wl or '<wordlist>'} -t {conc} -silent",
+        })
         return tools_info
 
     # ── Stage implementations ─────────────────────────────────────────
@@ -223,6 +256,69 @@ class TakeoverPipeline:
 
     def _run_enum_tool(self, tool, domain: str) -> ToolResult:
         return tool.run(domain, timeout=self.timeout)
+
+    def _dns_bruteforce(
+        self, targets: list[str], existing: set[str], parent_map: dict[str, str]
+    ) -> tuple[set[str], list[str], list[str]]:
+        """Stage 1b: optional passive DNS brute-force via dnsx + n0kovo wordlist.
+
+        Resolves <word>.<domain> candidates and merges live hits into the
+        subdomain set. Off by default; enabled via `ohsint takeover --dns-bruteforce`.
+        Honors configs/paths.yaml for the wordlist location.
+        """
+        import shutil
+        import subprocess
+
+        new_subs: set[str] = set()
+        executed: list[str] = []
+        failed: list[str] = []
+
+        bf_cfg = (self.config.get_profile("subdomain_takeover") or {}).get(
+            "optional_dns_bruteforce", {}
+        )
+        wordlist = self.config.resolve_path_tokens(bf_cfg.get("wordlist", ""))
+        concurrency = int(bf_cfg.get("concurrency", 100))
+
+        if not shutil.which("dnsx"):
+            console.print("  [yellow]⚠ dnsx not installed — skipping DNS brute-force[/yellow]")
+            failed.append("dnsx_bruteforce")
+            return new_subs, executed, failed
+
+        if not wordlist or not os.path.isfile(wordlist):
+            console.print(
+                f"  [yellow]⚠ Wordlist not found: {wordlist or '(unset)'} — skipping DNS "
+                f"brute-force. Install: git clone https://github.com/n0kovo/n0kovo_subdomains[/yellow]"
+            )
+            failed.append("dnsx_bruteforce")
+            return new_subs, executed, failed
+
+        console.print(
+            "[cyan]Stage 1b:[/cyan] DNS brute-force via dnsx (n0kovo wordlist, ~30-90 min)..."
+        )
+        for domain in targets:
+            cmd = [
+                "dnsx", "-d", domain, "-w", wordlist,
+                "-t", str(concurrency), "-silent",
+            ]
+            try:
+                proc = subprocess.run(
+                    cmd, capture_output=True, text=True,
+                    timeout=max(self.timeout, 3600), shell=False,
+                )
+                for line in proc.stdout.splitlines():
+                    host = line.strip().lower().rstrip(".")
+                    if host == domain or host.endswith("." + domain):
+                        if host not in existing:
+                            new_subs.add(host)
+                            parent_map.setdefault(host, domain)
+                if "dnsx_bruteforce" not in executed:
+                    executed.append("dnsx_bruteforce")
+            except Exception as e:
+                logger.warning("dnsx brute-force failed for %s: %s", domain, e)
+                if "dnsx_bruteforce" not in failed:
+                    failed.append("dnsx_bruteforce")
+
+        return new_subs, executed, failed
 
     def _resolve_cnames(self, target: str, subdomain_file: str) -> tuple[dict, ToolResult]:
         """Stage 2: Resolve CNAMEs via dnsx."""

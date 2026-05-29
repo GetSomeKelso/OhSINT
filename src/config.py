@@ -15,10 +15,22 @@ DEFAULT_PROFILES_FILE = DEFAULT_CONFIG_DIR / "scan_profiles.yaml"
 DEFAULT_TAKEOVER_PROVIDERS_FILE = DEFAULT_CONFIG_DIR / "takeover_providers.yaml"
 DEFAULT_PIPELINE_DEFAULTS_FILE = DEFAULT_CONFIG_DIR / "pipeline_defaults.yaml"
 DEFAULT_OPSEC_CONFIG_FILE = DEFAULT_CONFIG_DIR / "opsec.yaml"
+DEFAULT_PATHS_FILE = DEFAULT_CONFIG_DIR / "paths.yaml"
 DEFAULT_RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 DEFAULT_TIMEOUT = 300  # seconds per tool
 DEFAULT_DORK_DELAY = 3.0  # seconds between Google dork queries
 DEFAULT_MCP_TOKEN_ENV = "OHSINT_MCP_TOKEN"
+
+# Wordlist / data-source path resolution (Change 3 — wordlist integration)
+PATH_ENV_VARS = {
+    "seclists": "OHSINT_SECLISTS_PATH",
+    "wordlists": "OHSINT_WORDLISTS_PATH",
+}
+DEFAULT_PATHS = {
+    "seclists": "/opt/SecLists",
+    "wordlists": "/opt/wordlists",
+    "n0kovo_subdomains": "{wordlists}/n0kovo_subdomains",
+}
 
 
 class Config:
@@ -143,6 +155,95 @@ class Config:
             else:
                 self._opsec_config = {}
         return dict(self._opsec_config)
+
+    # ── Filesystem paths (wordlists / data sources) ───────────────────
+
+    def _load_paths(self) -> Dict[str, str]:
+        if not hasattr(self, "_paths"):
+            path = DEFAULT_PATHS_FILE
+            data: Dict[str, str] = {}
+            if path.exists():
+                with open(path) as f:
+                    raw = yaml.safe_load(f) or {}
+                data = raw.get("paths", {}) or {}
+            self._paths = data
+        return self._paths
+
+    def get_path(self, name: str) -> str:
+        """Resolve a configured filesystem path.
+
+        Priority: config file (paths.yaml, non-empty) → env var → built-in default.
+        Tokens {wordlists}/{seclists} are interpolated from the resolved roots.
+        """
+        cfg = self._load_paths()
+        value = str(cfg.get(name) or "").strip()
+
+        # 2. Environment variable
+        if not value:
+            env_name = PATH_ENV_VARS.get(name)
+            if env_name and os.environ.get(env_name):
+                value = os.environ[env_name].strip()
+
+        # 3. Built-in default
+        if not value:
+            value = DEFAULT_PATHS.get(name, "")
+
+        return self.resolve_path_tokens(value)
+
+    def resolve_path_tokens(self, value: str) -> str:
+        """Interpolate {WORDLISTS_PATH}/{SECLISTS_PATH}/{wordlists}/{seclists} tokens."""
+        if not value:
+            return value
+        # Resolve roots directly from config/env/default to avoid recursion on
+        # the bare root names (seclists/wordlists never contain tokens themselves).
+        wl = self._resolve_root("wordlists")
+        sl = self._resolve_root("seclists")
+        return (
+            value.replace("{WORDLISTS_PATH}", wl)
+            .replace("{SECLISTS_PATH}", sl)
+            .replace("{wordlists}", wl)
+            .replace("{seclists}", sl)
+        )
+
+    def _resolve_root(self, name: str) -> str:
+        cfg = self._load_paths()
+        value = str(cfg.get(name) or "").strip()
+        if not value:
+            env_name = PATH_ENV_VARS.get(name)
+            if env_name and os.environ.get(env_name):
+                value = os.environ[env_name].strip()
+        if not value:
+            value = DEFAULT_PATHS.get(name, "")
+        return value
+
+    def get_paths_status(self) -> list[dict]:
+        """Return wordlist/data-source path status for install-check."""
+        seclists = self.get_path("seclists")
+        n0kovo = self.get_path("n0kovo_subdomains")
+        api_endpoints = str(
+            Path(seclists) / "Discovery" / "Web-Content" / "api" / "api-endpoints.txt"
+        )
+        return [
+            {
+                "name": "SecLists",
+                "path": seclists,
+                "exists": Path(seclists).is_dir(),
+                "install": "apt install seclists  OR  "
+                "git clone https://github.com/danielmiessler/SecLists /opt/SecLists",
+            },
+            {
+                "name": "SecLists api-endpoints.txt",
+                "path": api_endpoints,
+                "exists": Path(api_endpoints).is_file(),
+                "install": "included with SecLists (cd /opt/SecLists && git pull to update)",
+            },
+            {
+                "name": "n0kovo_subdomains",
+                "path": n0kovo,
+                "exists": Path(n0kovo).is_dir(),
+                "install": f"git clone https://github.com/n0kovo/n0kovo_subdomains {n0kovo}",
+            },
+        ]
 
     def api_keys_file_exists(self) -> bool:
         return self.api_keys_path.exists()

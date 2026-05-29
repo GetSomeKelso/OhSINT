@@ -219,6 +219,17 @@ subdomain_takeover:
     - subzy:
         concurrency: 10
     - nuclei_takeovers
+  optional_dns_bruteforce:
+    enabled: false          # off by default — 3M entries, runs slow
+    wordlist: "{WORDLISTS_PATH}/n0kovo_subdomains/n0kovo_subdomains_huge.txt"
+    tool: dnsx
+    concurrency: 100
+    notes: >
+      Passive DNS brute-force via dnsx against the n0kovo_subdomains wordlist —
+      prefixes extracted from valid TLS certs across the entire IPv4 space, so
+      every entry was proven live somewhere. Higher signal than permutation lists.
+      Only enable for deep-dive engagements or large-scope bug bounty targets.
+      Expect 30-90 minute runtime. Run overnight. CLI: 'ohsint takeover --dns-bruteforce'.
   notes: >
     Detection only — does not claim resources or interact with provider accounts.
     Uses dedicated TakeoverPipeline for sequential data-flow chaining.

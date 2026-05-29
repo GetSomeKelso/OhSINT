@@ -306,6 +306,17 @@ def install_check(ctx):
                 console.print(f"  [yellow]⚠[/yellow] {t.name} missing keys: {', '.join(missing)}")
                 all_ok = False
 
+    # Check wordlists / data sources (optional — warn, don't fail)
+    console.print("\n[bold]Checking wordlists...[/bold]\n")
+    for item in config.get_paths_status():
+        if item["exists"]:
+            console.print(f"  [green]✓[/green] {item['name']}: {item['path']}")
+        else:
+            console.print(
+                f"  [yellow]⚠[/yellow] {item['name']}: {item['path']} not found\n"
+                f"       → install: {item['install']}"
+            )
+
     if all_ok:
         console.print("\n[bold green]All checks passed.[/bold green]")
     else:
@@ -354,8 +365,10 @@ def api_keys(ctx):
               help="Cap on total subdomains to process (default: 5000).")
 @click.option("--per-domain", is_flag=True, default=False,
               help="Generate separate per-domain reports in addition to combined.")
+@click.option("--dns-bruteforce", is_flag=True, default=False,
+              help="Add optional n0kovo DNS brute-force (dnsx). Slow (30-90 min); needs the wordlist.")
 @click.pass_context
-def takeover(ctx, target, targets_file, scope_file, re_scan, max_subdomains, per_domain):
+def takeover(ctx, target, targets_file, scope_file, re_scan, max_subdomains, per_domain, dns_bruteforce):
     """Detect subdomain takeover vulnerabilities.
 
     Enumerates subdomains, resolves CNAMEs, filters by provider patterns,
@@ -402,6 +415,7 @@ def takeover(ctx, target, targets_file, scope_file, re_scan, max_subdomains, per
         targets=domains,
         re_scan_path=re_scan_path,
         max_subdomains=max_subdomains,
+        dns_bruteforce=dns_bruteforce,
     )
 
     save_report(report, output_dir, ctx.obj["output_format"])

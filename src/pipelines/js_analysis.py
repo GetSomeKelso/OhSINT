@@ -161,6 +161,14 @@ class JsAnalysisPipeline:
             "installed": shutil.which("trufflehog") is not None,
             "command": "trufflehog filesystem <dir> --json --only-verified",
         })
+        # Stage 7 API-doc path source (SecLists, resolved via configs/paths.yaml)
+        seclists = self.config.get_path("seclists")
+        api_file = os.path.join(seclists, "Discovery", "Web-Content", "api", "api-endpoints.txt")
+        tools_info.append({
+            "name": "SecLists api-endpoints (Stage 7 paths)",
+            "installed": os.path.isfile(api_file),
+            "command": f"probe https://<host>/<path> for paths in {api_file}",
+        })
         return tools_info
 
     # ── Stage implementations ─────────────────────────────────────────
@@ -363,12 +371,71 @@ class JsAnalysisPipeline:
             logger.warning("TruffleHog filesystem scan failed: %s", e)
             return []
 
-    def _swagger_discovery(self, targets: list[str]) -> list[IntelFinding]:
-        """Stage 7: Check for exposed Swagger/OpenAPI documentation."""
-        common_paths = self._pipeline_config.get("swagger_common_paths", [
+    def _load_api_doc_paths(self) -> list[str]:
+        """Build the API-doc path list: hardcoded fallback ∪ SecLists sources.
+
+        Sources (when present): SecLists ``Discovery/Web-Content/swagger.txt`` and
+        ``api/api-endpoints.txt`` (resolved via configs/paths.yaml). Falls back to
+        the hardcoded ``swagger_common_paths`` when SecLists is not installed.
+        Still passive — these paths are probed on hosts already known to be live.
+        """
+        hardcoded = self._pipeline_config.get("swagger_common_paths", [
             "/swagger.json", "/api-docs", "/openapi.json",
             "/v2/api-docs", "/v3/api-docs",
         ])
+        paths: list[str] = list(hardcoded)
+
+        if self._pipeline_config.get("seclists_api_paths", True):
+            seclists = self.config.get_path("seclists")
+            sources = [
+                os.path.join(seclists, "Discovery", "Web-Content", "swagger.txt"),
+                os.path.join(seclists, "Discovery", "Web-Content", "api", "api-endpoints.txt"),
+            ]
+            found_any = False
+            for src in sources:
+                if not os.path.isfile(src):
+                    continue
+                found_any = True
+                try:
+                    with open(src, "r", encoding="utf-8", errors="ignore") as f:
+                        for line in f:
+                            p = line.strip()
+                            if not p or p.startswith("#"):
+                                continue
+                            if not p.startswith("/"):
+                                p = "/" + p
+                            paths.append(p)
+                except OSError as e:
+                    logger.warning("Could not read SecLists path file %s: %s", src, e)
+            if not found_any:
+                logger.warning(
+                    "SecLists API path files not found under %s — using hardcoded fallback. "
+                    "Install: git clone https://github.com/danielmiessler/SecLists /opt/SecLists",
+                    seclists,
+                )
+                console.print(
+                    f"  [yellow]⚠ SecLists not found at {seclists} — using "
+                    f"{len(hardcoded)} hardcoded API-doc paths[/yellow]"
+                )
+
+        # Dedup preserving order (hardcoded high-signal paths first), then cap
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for p in paths:
+            if p not in seen:
+                seen.add(p)
+                deduped.append(p)
+
+        cap = int(self._pipeline_config.get("seclists_api_max_paths", 1000))
+        if cap > 0 and len(deduped) > cap:
+            deduped = deduped[:cap]
+        return deduped
+
+    def _swagger_discovery(self, targets: list[str]) -> list[IntelFinding]:
+        """Stage 7: Check for exposed Swagger/OpenAPI documentation."""
+        from src.http_client import OhSINTHTTPClient
+
+        common_paths = self._load_api_doc_paths()
         findings = []
 
         try:

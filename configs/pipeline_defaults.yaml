@@ -19,7 +19,9 @@ js_analysis:
   js_max_file_size_mb: 5          # Skip JS files larger than this
   js_max_files: 500               # Cap total JS files to download
   disable_sourcemap_recovery: false  # Set true to skip .map file checks
-  swagger_common_paths:
+  seclists_api_paths: true        # Use SecLists swagger.txt + api/api-endpoints.txt as path source
+  seclists_api_max_paths: 1000    # Cap total API-doc paths probed per host (keeps it passive-scale)
+  swagger_common_paths:           # Hardcoded fallback — always used if SecLists missing
     - /swagger.json
     - /swagger/v1/swagger.json
     - /swagger-ui.html

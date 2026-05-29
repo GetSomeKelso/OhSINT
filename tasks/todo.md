@@ -172,3 +172,16 @@
 - [ ] API key health check
 - [x] Unit tests for every parser (24/24 passing)
 - [ ] Integration tests against known-safe targets
+
+## Phase 14 — Wordlist Integration Addendum ✅
+- [x] Change 3: committed configs/paths.yaml + Config.get_path() resolver
+      (config file → OHSINT_SECLISTS_PATH/OHSINT_WORDLISTS_PATH env → default),
+      {WORDLISTS_PATH}/{SECLISTS_PATH} token interpolation, get_paths_status()
+- [x] Change 1: optional n0kovo DNS brute-force in TakeoverPipeline
+      (optional_dns_bruteforce profile block, --dns-bruteforce flag, merge+dedup)
+- [x] Change 2: js_analysis Stage 7 uses SecLists swagger.txt + api-endpoints.txt
+      (deduped, capped) with hardcoded fallback; fixed latent OhSINTHTTPClient no-op
+- [x] install-check WORDLISTS section (warns, never fails)
+- [x] tests/test_paths.py (7 passed); takeover + js-analysis dry-runs verified
+- [x] Spec: tasks/wordlist-integration-addendum.md; lessons #11-13
+- [ ] Install SecLists (/opt/SecLists) + n0kovo (/opt/wordlists/n0kovo_subdomains) on Kali VM

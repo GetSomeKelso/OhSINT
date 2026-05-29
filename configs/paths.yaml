@@ -1,0 +1,16 @@
+# OhSINT — Filesystem paths for external wordlists / data sources
+#
+# These are NOT secrets — safe to commit. (API keys live in api_keys.yaml.)
+#
+# Resolution priority for each path (see src/config.py get_path):
+#   1. The value in this file (if non-empty)
+#   2. Environment variable: OHSINT_SECLISTS_PATH / OHSINT_WORDLISTS_PATH
+#   3. Built-in default (/opt/SecLists, /opt/wordlists)
+#
+# Blank a value below to let the env var (or default) take over.
+# Tokens {wordlists} / {seclists} are interpolated from the resolved roots.
+
+paths:
+  seclists: "/opt/SecLists"          # git clone https://github.com/danielmiessler/SecLists  OR  apt install seclists
+  wordlists: "/opt/wordlists"        # root for non-SecLists wordlists
+  n0kovo_subdomains: "{wordlists}/n0kovo_subdomains"

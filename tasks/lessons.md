@@ -64,3 +64,29 @@ to the current `eth0` IP, and launch with `ohsint-mcp --host <that-ip>`.
 OhSINT is installed with `pip install -e .`. After `git pull` on the VM, the new code
 is live — no reinstall. But the **running MCP server must be restarted** to load new
 tool registrations / MCP endpoints (the process snapshots the registry at startup).
+
+## Config / wordlist integration
+
+### 11. Wordlist paths live in configs/paths.yaml, not api_keys.yaml
+The wordlist-integration addendum suggested putting SecLists/n0kovo paths in
+`api_keys.yaml`. But `api_keys.yaml` is gitignored (only `.example` is committed), so
+paths there would be invisible to every fresh clone — bad for replication. Filesystem
+paths aren't secrets. They live in committed `configs/paths.yaml`, resolved by
+`Config.get_path()` with priority **config file → `OHSINT_SECLISTS_PATH` /
+`OHSINT_WORDLISTS_PATH` env var → default (`/opt/SecLists`, `/opt/wordlists`)**.
+Blank a value in paths.yaml to let the env var/default take over. Tokens
+`{WORDLISTS_PATH}` / `{SECLISTS_PATH}` interpolate from the resolved roots.
+
+### 12. dnsx brute-force uses `-d DOMAIN -w WORDLIST`, not `-l`
+The addendum's documented invocation mixed `-l <hosts>` with `-w <wordlist> -d <domain>`.
+dnsx brute-force mode generates `<word>.<domain>` and resolves it via
+`dnsx -d <domain> -w <wordlist> -t <concurrency> -silent`; `-l` is for resolving an
+existing host list (a different mode). The TakeoverPipeline uses the brute-force form,
+filters stdout to in-scope FQDNs, and merges them into the subdomain set (set union =
+automatic dedup) before the CNAME stage. Off by default; `ohsint takeover --dns-bruteforce`.
+
+### 13. Stage-7 swagger discovery had a latent no-op
+`js_analysis._swagger_discovery` referenced `OhSINTHTTPClient` without importing it, so
+the whole stage silently returned `[]` (NameError swallowed by a broad except). Fixed
+while wiring in the SecLists `api-endpoints.txt` / `swagger.txt` path source (with the
+hardcoded `swagger_common_paths` retained as fallback when SecLists isn't installed).
