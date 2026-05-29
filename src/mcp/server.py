@@ -1305,12 +1305,19 @@ def main():
         )
 
     # --- DNS rebinding protection (MCP05 / LLM06) ---
-    # MCP 1.26+ validates Host headers. When binding to 0.0.0.0 we need to
-    # allow private-network IPs instead of disabling all validation.
-    if args.host == "0.0.0.0":
+    # MCP 1.26+ validates Host headers. When binding to any non-localhost
+    # address (0.0.0.0 or a specific private IP like a Hyper-V NAT address),
+    # the default validator rejects the Host header. We install a private-network
+    # allowlist so RFC1918 IPs are accepted while public IPs are still blocked.
+    if args.host not in ("127.0.0.1", "localhost", ""):
         from mcp.server.transport_security import TransportSecurityMiddleware
 
         allowed_networks = list(_DEFAULT_ALLOWED_NETWORKS)
+        # Always allow the exact bound host (covers specific-IP binds)
+        try:
+            allowed_networks.append(ipaddress.ip_network(args.host, strict=False))
+        except ValueError:
+            pass
         if args.allowed_hosts:
             for entry in args.allowed_hosts.split(","):
                 entry = entry.strip()
