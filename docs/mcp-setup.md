@@ -1,6 +1,22 @@
 # MCP Server Setup — Connecting OhSINT to Claude
 
-OhSINT exposes all 43 tools as MCP tools via an SSE server (`ohsint-mcp`). This guide covers connecting it to Claude Desktop and Claude Code from a Windows host.
+OhSINT exposes all 73 tools as MCP tools via an SSE server (`ohsint-mcp`). This guide covers connecting it to Claude Desktop and Claude Code from a Windows host.
+
+## Tool Installation (Kali VM)
+
+Run the one-shot setup script after cloning the repo. It installs every tool binary
+the pipelines need, handling all the known gotchas (tmpfs `/tmp`, PATH, trufflehog,
+gitleaks module path, git-clone tools). See `tasks/lessons.md` for the why behind each step.
+
+```bash
+cd ~/Tools/OhSINT
+pip install -e . --break-system-packages   # register the ohsint / ohsint-mcp CLIs
+bash scripts/setup-kali.sh                  # install all tool binaries
+ohsint install-check                        # verify
+```
+
+The script is idempotent — safe to re-run. It skips tools that need accounts/contracts
+(FCRA commercial, LinkedIn) and `getjs` (redundant with subjs).
 
 ## VM Port Forwarding
 
@@ -89,12 +105,19 @@ source ~/Tools/OhSINT/.venv/bin/activate
 # VirtualBox / VMware (localhost only, port forwarded to host)
 ohsint-mcp
 
-# Hyper-V (must bind to all interfaces)
-ohsint-mcp --host 0.0.0.0
+# Hyper-V — bind to the VM's eth0 IP (or 0.0.0.0). Both work: the server's
+# DNS-rebinding allowlist accepts any RFC1918/private address and the exact bound host.
+ohsint-mcp --host 192.168.x.x        # specific private IP
+ohsint-mcp --host 0.0.0.0            # all interfaces
 
 # With bearer token authentication (recommended)
 ohsint-mcp --host 0.0.0.0 --token YOUR_TOKEN_HERE
 ```
+
+> **PATH requirement:** Go-installed tools live in `~/go/bin`, which may not be on the
+> server process's PATH. `scripts/setup-kali.sh` symlinks them to `/usr/local/bin` so
+> the server finds them. If tools show MISSING despite being installed, that symlink
+> (or a PATH export before launching the server) is the fix — see `tasks/lessons.md`.
 
 ### Server Flags
 
@@ -201,7 +224,7 @@ Restart Claude Code for the tools to load.
 
 ## MCP Tools Available
 
-Once connected, 40+ MCP tools are available. **Passive tools** run without `authorization_confirmed`. **Active tools** (spiderfoot, recon-ng, linkedin2username, xray, linkedint) require `authorization_confirmed: true`. **FCRA-gated tools** (whitepages_pro, beenverified, + 6 stubs: lexisnexis, tlo, clear, tracers, idi, smartmove) additionally require `fcra_purpose`.
+Once connected, 70+ MCP tools are available across individual tools and pipeline orchestrators (`osint_subdomain_takeover`, `osint_url_harvest`, `osint_secret_surface`, `osint_js_analysis`, `osint_passive_full`). **Passive tools** run without `authorization_confirmed`. **Active tools** (spiderfoot, recon-ng, linkedin2username, xray, linkedint, httpx, naabu, shuffledns, interactsh) require `authorization_confirmed: true`. **FCRA-gated tools** (whitepages_pro, beenverified, + 6 stubs: lexisnexis, tlo, clear, tracers, idi, smartmove) additionally require `fcra_purpose`.
 
 | MCP Tool | Description |
 |----------|-------------|
@@ -250,8 +273,20 @@ Once connected, 40+ MCP tools are available. **Passive tools** run without `auth
 
 ## Troubleshooting
 
-### "Invalid Host header"
-The MCP server's DNS rebinding protection is blocking your request. Use `--host 0.0.0.0` on the server and ensure your Windows IP is in a private RFC1918 range. Add custom ranges with `--allowed-hosts`.
+### "Invalid Host header" / 421 Misdirected Request
+The MCP server's DNS rebinding protection is blocking your request. The allowlist
+accepts private RFC1918 addresses and the exact bound host, for both `--host 0.0.0.0`
+and specific-IP binds. If you still see this, your client is connecting via a hostname
+or public IP not in the allowlist — add it with `--allowed-hosts <ip-or-cidr>`.
+
+### Tools show MISSING after install
+The Go binaries are in `~/go/bin` but not on the server's PATH. Symlink them:
+`sudo ln -sf ~/go/bin/* /usr/local/bin/`. No restart needed — `shutil.which()` re-scans
+PATH per call. (`scripts/setup-kali.sh` does this automatically.)
+
+### `no space left on device` during `go install`
+`/tmp` is a small tmpfs (~954M) and Go build scratch overflows it. Set
+`export TMPDIR=$HOME/.gotmp` before installing. (Handled by `scripts/setup-kali.sh`.)
 
 ### "Unauthorized" (401)
 Bearer token mismatch. Check that `OHSINT_MCP_TOKEN` is set on the Windows side and matches the `--token` value on the server.

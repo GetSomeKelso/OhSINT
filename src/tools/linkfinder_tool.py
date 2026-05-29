@@ -16,7 +16,7 @@ class LinkFinderTool(BaseTool):
     name = "linkfinder"
     description = "JavaScript endpoint extractor — discovers API paths and URLs in JS files"
     binary_name = "linkfinder"
-    install_cmd = "pip install linkfinder"
+    install_cmd = "git clone https://github.com/GerbenJavado/LinkFinder.git ~/Tools/osint-deps/LinkFinder && pip install ~/Tools/osint-deps/LinkFinder --break-system-packages && sudo ln -sf ~/Tools/osint-deps/LinkFinder/linkfinder.py /usr/local/bin/linkfinder"
     accepted_target_types = (TargetType.URL,)
     requires_api_keys = ()
 

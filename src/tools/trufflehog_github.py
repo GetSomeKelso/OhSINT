@@ -85,7 +85,7 @@ class TrufflehogGithub(BaseTool):
     name = "trufflehog_github"
     description = "TruffleHog GitHub scanner — finds verified leaked secrets in public repos"
     binary_name = "trufflehog"
-    install_cmd = "go install github.com/trufflesecurity/trufflehog/v3@latest"
+    install_cmd = "curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sudo sh -s -- -b /usr/local/bin"
     accepted_target_types = (TargetType.ORG_NAME, TargetType.GITHUB_HANDLE, TargetType.DOMAIN)
     requires_api_keys = ("github_dorks.github_token",)
 

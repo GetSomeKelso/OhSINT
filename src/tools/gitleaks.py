@@ -17,7 +17,7 @@ class Gitleaks(BaseTool):
     name = "gitleaks"
     description = "Gitleaks — fast regex-based secret scanner for git repositories"
     binary_name = "gitleaks"
-    install_cmd = "go install github.com/gitleaks/gitleaks/v8@latest"
+    install_cmd = "go install github.com/zricethezav/gitleaks/v8@latest"
     accepted_target_types = (TargetType.DOMAIN, TargetType.ORG_NAME)
     requires_api_keys = ()
 

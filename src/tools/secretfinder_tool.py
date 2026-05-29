@@ -17,7 +17,7 @@ class SecretFinderTool(BaseTool):
     name = "secretfinder"
     description = "JavaScript secret extractor — finds API keys, tokens, and credentials in JS files"
     binary_name = "SecretFinder"
-    install_cmd = "pip install SecretFinder"
+    install_cmd = "git clone https://github.com/m4ll0k/SecretFinder.git ~/Tools/osint-deps/SecretFinder && pip install requests jsbeautifier --break-system-packages && sudo ln -sf ~/Tools/osint-deps/SecretFinder/SecretFinder.py /usr/local/bin/SecretFinder"
     accepted_target_types = (TargetType.URL,)
     requires_api_keys = ()
 

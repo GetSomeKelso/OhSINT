@@ -16,7 +16,7 @@ class TrufflehogDocker(BaseTool):
     name = "trufflehog_docker"
     description = "TruffleHog Docker scanner — finds verified leaked secrets in public Docker images"
     binary_name = "trufflehog"
-    install_cmd = "go install github.com/trufflesecurity/trufflehog/v3@latest"
+    install_cmd = "curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sudo sh -s -- -b /usr/local/bin"
     accepted_target_types = (TargetType.DOMAIN, TargetType.ORG_NAME)
     requires_api_keys = ()
 
