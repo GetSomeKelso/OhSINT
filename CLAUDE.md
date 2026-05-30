@@ -111,6 +111,31 @@ domain(s) ──► subfinder + crt.sh (parallel subdomain enumeration)
 **MCP:** `osint_subdomain_takeover(domains="domain.com,other.com")`
 **Re-scan:** `ohsint takeover -t domain.com --re-scan results/previous/report.json`
 
+### Active Recon Pipeline (requires --authorization)
+
+**The only pipeline that touches the target.** Every stage sends traffic. Hard-refuses
+to run without confirmed authorization.
+
+```
+subfinder + crt.sh (passive seed)
+   └─(optional --brute) shuffledns ── active DNS brute-force
+        ▼ narrowing funnel — each stage only processes prior-stage live results
+   naabu ──────► open host:port pairs (only the resolved subdomains)
+        ▼
+   httpx ──────► live HTTP services (only the open ports)
+        ▼
+   katana ─────► endpoints + JS + tech (only confirmed-live services)
+        ▼
+   nuclei_scan ► template findings (only the crawled live surface)
+        ▼
+   ReconReport (live-host inventory + tech + endpoints + vulns)
+```
+
+**CLI:** `ohsint active-recon --authorization -t domain.com`
+**MCP:** `osint_active_recon(domains="domain.com", authorization_confirmed=true)`
+**Feeds:** katana JS URLs → js_analysis; httpx-confirmed endpoints → Burp `create_repeater_tab`.
+**Defaults:** naabu top-100, nuclei high,critical, crawl depth 2. shuffledns brute is `--brute` opt-in.
+
 ### FCRA-Gated Identity Pipeline (requires --fcra-permissible-purpose)
 
 ```
@@ -187,6 +212,7 @@ When the user asks to "investigate", "validate", or "deep dive" on findings from
 | `secret_surface` | 7 | No | GitHub/Docker/Postman secret discovery |
 | `js_analysis` | 4 | No | JavaScript endpoint + secret analysis |
 | `osint_passive_full` | all | No | Full passive pipeline (all 4 combined) |
+| `active_recon` | 6 | **Yes** | Active funnel — naabu → httpx → katana → nuclei (touches target) |
 
 ## API Keys
 
