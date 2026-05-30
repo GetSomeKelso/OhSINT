@@ -333,6 +333,24 @@ def install_check(ctx):
         ("js-analysis", JsAnalysisPipeline),
         ("passive-full", PassiveFullPipeline),
     ]
+    from src.registry import _TOOL_REGISTRY
+
+    def _missing_keys_for(tool_name: str) -> list[str]:
+        """Look a tool up in the registry by name and return its missing API keys.
+
+        Names from dry_run that aren't registered tools (e.g. 'js-beautify',
+        'trufflehog (filesystem)', the SecLists path entry) have no key reqs.
+        """
+        # Strip any '[label] ' prefix passive-full adds, and leading spaces.
+        clean = tool_name.split("]", 1)[-1].strip()
+        cls = _TOOL_REGISTRY.get(clean)
+        if not cls:
+            return []
+        try:
+            return cls(config=config).check_api_keys()
+        except Exception:
+            return []
+
     for label, cls in pipelines:
         try:
             tools = cls(config=config).dry_run(["example.com"])
@@ -341,19 +359,31 @@ def install_check(ctx):
             all_ok = False
             continue
         required = [t for t in tools if not t.get("optional")]
-        missing = [t["name"] for t in required if not t["installed"]]
-        opt_missing = [t["name"] for t in tools if t.get("optional") and not t["installed"]]
+        missing = [t["name"].strip() for t in required if not t["installed"]]
+        opt_missing = [t["name"].strip() for t in tools if t.get("optional") and not t["installed"]]
+        # API-key gaps among installed, required tools → degraded, not missing
+        key_gaps = []
+        for t in required:
+            if t["installed"]:
+                for mk in _missing_keys_for(t["name"]):
+                    key_gaps.append(f"{t['name'].strip()} ({mk})")
         ready = len(required) - len(missing)
-        if not missing:
-            line = f"  [green]✓[/green] {label} — ready ({ready}/{len(required)} required tools)"
-            if opt_missing:
-                line += f"  [dim](optional off: {', '.join(opt_missing)})[/dim]"
-            console.print(line)
-        else:
+
+        if missing:
             console.print(
                 f"  [red]✗[/red] {label} — missing {len(missing)}: {', '.join(missing)}"
             )
             all_ok = False
+        elif key_gaps:
+            console.print(
+                f"  [yellow]⚠[/yellow] {label} — tools installed but degraded "
+                f"(missing API key): {', '.join(key_gaps)}"
+            )
+        else:
+            line = f"  [green]✓[/green] {label} — ready ({ready}/{len(required)} required tools)"
+            if opt_missing:
+                line += f"  [dim](optional off: {', '.join(opt_missing)})[/dim]"
+            console.print(line)
 
     if all_ok:
         console.print("\n[bold green]All checks passed.[/bold green]")
