@@ -1210,6 +1210,49 @@ async def osint_passive_full(
 
 
 # ---------------------------------------------------------------------------
+# Vendor / third-party risk assessment
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_vendor_risk(
+    domains: str,
+    authorization_confirmed: bool = False,
+    skip_takeover: bool = False,
+) -> str:
+    """Assess a vendor's external security posture as a graded risk scorecard.
+
+    Runs the passive recon toolchain against a vendor domain, then scores findings
+    by risk-to-you (breach exposure, leaked secrets, attack surface, vulnerabilities,
+    hygiene) into a letter grade. Passive — public-data recon of a counterparty.
+
+    Args:
+        domains: comma-separated vendor domain list
+        skip_takeover: skip the subdomain takeover stage
+    """
+    _require_auth(authorization_confirmed)  # passive, but keep audit-gated like passive_full
+    start = _time.time()
+    domain_list = [d.strip().lower() for d in domains.split(",") if d.strip()]
+    if not domain_list:
+        raise ValueError("No domains provided. Pass comma-separated domain list.")
+    try:
+        from src.pipelines.vendor_risk import VendorRiskPipeline
+
+        pipeline = VendorRiskPipeline(config=_get_config(), timeout=DEFAULT_TIMEOUT, verbose=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = DEFAULT_RESULTS_DIR / f"vendor_risk_{timestamp}"
+        report = await asyncio.to_thread(
+            pipeline.run, domain_list, output_dir, skip_takeover,
+        )
+        save_report(report, output_dir, "all")
+        _audit_log("vendor_risk", domains, authorization_confirmed, True, _time.time() - start)
+        grade = (report.resolved_target or {}).get("vendor_risk_grade", "?")
+        score = (report.resolved_target or {}).get("vendor_risk_score", "?")
+        return f"**Vendor Risk Grade: {grade} (score {score}/100)**\n\n" + report.to_markdown()
+    except Exception as exc:
+        _audit_log("vendor_risk", domains, authorization_confirmed, False, _time.time() - start, str(exc))
+        raise
+
+
+# ---------------------------------------------------------------------------
 # Active reconnaissance (auth-gated funnel)
 # ---------------------------------------------------------------------------
 @mcp.tool()

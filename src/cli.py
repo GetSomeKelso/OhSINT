@@ -326,6 +326,7 @@ def install_check(ctx):
     from src.pipelines.js_analysis import JsAnalysisPipeline
     from src.pipelines.passive_full import PassiveFullPipeline
     from src.pipelines.active_recon import ActiveReconPipeline
+    from src.pipelines.vendor_risk import VendorRiskPipeline
 
     pipelines = [
         ("takeover", TakeoverPipeline),
@@ -333,6 +334,7 @@ def install_check(ctx):
         ("secret-surface", SecretSurfacePipeline),
         ("js-analysis", JsAnalysisPipeline),
         ("passive-full", PassiveFullPipeline),
+        ("vendor-risk", VendorRiskPipeline),
         ("active-recon [ACTIVE — needs --authorization]", ActiveReconPipeline),
     ]
     from src.registry import _TOOL_REGISTRY
@@ -838,6 +840,51 @@ def passive_full(ctx, target, targets_file, scope_file, skip_takeover):
     output_dir = _resolve_output_dir(ctx, "passive_full_" + "_".join(domains[:3]))
     console.print(f"[bold green]Starting full passive OSINT scan[/bold green]")
     console.print(f"  Targets: {', '.join(domains)}")
+    report = pipeline.run(targets=domains, output_dir=output_dir, skip_takeover=skip_takeover)
+    save_report(report, output_dir, ctx.obj["output_format"])
+    console.print(f"\n[green]Reports saved to {output_dir}[/green]")
+    _print_summary(report)
+
+
+@cli.command("vendor-risk")
+@click.option("--target", "-t", multiple=True, help="Vendor domain(s).")
+@click.option("--targets-file", type=click.Path(exists=True), default=None)
+@click.option("--scope-file", type=click.Path(exists=True), default=None)
+@click.option("--skip-takeover", is_flag=True, default=False, help="Skip subdomain takeover stage.")
+@click.pass_context
+def vendor_risk(ctx, target, targets_file, scope_file, skip_takeover):
+    """Assess a vendor's external security posture as a graded risk scorecard.
+
+    Runs the passive recon toolchain against a vendor domain, then scores the
+    findings by risk-to-you (breach exposure, leaked secrets, attack surface,
+    vulnerabilities, hygiene) into a letter grade. Passive — no authorization gate.
+    Tune the rubric in configs/pipeline_defaults.yaml under `vendor_risk`.
+    """
+    from src.pipelines.vendor_risk import VendorRiskPipeline
+
+    domains = _resolve_takeover_targets(ctx, target, targets_file, scope_file)
+    if not domains:
+        console.print("[red]No targets specified.[/red]")
+        sys.exit(1)
+
+    config: Config = ctx.obj["config"]
+    pipeline = VendorRiskPipeline(config=config, timeout=ctx.obj["timeout"], verbose=ctx.obj["verbose"])
+
+    if ctx.obj.get("dry_run"):
+        console.print(f"[yellow][DRY RUN][/yellow] Vendor Risk Assessment")
+        console.print(f"  Vendors: {', '.join(domains)}")
+        console.print(f"  [dim]Reuses passive_full toolchain; scores findings as a risk scorecard.[/dim]\n")
+        table = Table(title="Pipeline stages (passive recon → risk scoring)")
+        table.add_column("Tool", style="cyan")
+        table.add_column("Installed")
+        table.add_column("Command preview")
+        for info in pipeline.dry_run(domains):
+            installed = "[green]Yes[/green]" if info["installed"] else "[red]No[/red]"
+            table.add_row(info["name"], installed, info["command"])
+        console.print(table)
+        return
+
+    output_dir = _resolve_output_dir(ctx, "vendor_risk_" + "_".join(domains[:3]))
     report = pipeline.run(targets=domains, output_dir=output_dir, skip_takeover=skip_takeover)
     save_report(report, output_dir, ctx.obj["output_format"])
     console.print(f"\n[green]Reports saved to {output_dir}[/green]")

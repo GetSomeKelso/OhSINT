@@ -32,3 +32,53 @@ js_analysis:
     - /openapi.json
     - /docs
     - /redoc
+
+vendor_risk:
+  # Risk scorecard rubric — opinionated defaults, tune to your risk appetite.
+  # Score starts at 100; each category subtracts penalty (per_finding × severity
+  # multiplier, summed, then capped). Final letter grade from `grades` thresholds.
+  # Override any of categories / severity_multipliers / grades here; omitted keys
+  # fall back to the built-in DEFAULT_RUBRIC in src/pipelines/vendor_risk.py.
+  categories:
+    breach_exposure:
+      label: "Breach & credential exposure"
+      types: ["breach", "credential", "infostealer"]
+      per_finding: 8
+      cap: 40
+      weight: 1.0
+    secret_leakage:
+      label: "Leaked secrets"
+      types: ["leaked_secret"]
+      per_finding: 10
+      cap: 40
+      weight: 1.0
+    attack_surface:
+      label: "Exposed attack surface"
+      types: ["subdomain_takeover", "exposed_api_doc", "sensitive_file", "port_service"]
+      per_finding: 4
+      cap: 30
+      weight: 1.0
+    vulnerabilities:
+      label: "Known vulnerabilities"
+      types: ["vulnerability"]
+      per_finding: 6
+      cap: 30
+      weight: 1.0
+    hygiene:
+      label: "Hygiene & footprint"
+      types: ["js_endpoint", "dns_record", "technology"]
+      per_finding: 1
+      cap: 15
+      weight: 1.0
+  severity_multipliers:
+    critical: 2.0
+    high: 1.5
+    medium: 1.0
+    low: 0.5
+    info: 0.25
+  grades:
+    - {min: 90, grade: "A"}
+    - {min: 80, grade: "B"}
+    - {min: 70, grade: "C"}
+    - {min: 60, grade: "D"}
+    - {min: 0, grade: "F"}

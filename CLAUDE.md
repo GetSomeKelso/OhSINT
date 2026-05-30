@@ -111,6 +111,26 @@ domain(s) ──► subfinder + crt.sh (parallel subdomain enumeration)
 **MCP:** `osint_subdomain_takeover(domains="domain.com,other.com")`
 **Re-scan:** `ohsint takeover -t domain.com --re-scan results/previous/report.json`
 
+### Vendor Risk Assessment (passive — no new tools)
+
+Runs the passive recon toolchain against a **vendor/counterparty** domain, then
+re-frames findings as a *risk-to-you* scorecard with a letter grade — not a
+bug-bounty finding list. Same tools as `osint_passive_full`, different lens.
+
+```
+vendor domain ──► osint_passive_full (takeover + url_harvest + secret_surface + js_analysis)
+                       ▼ score findings by category (tunable rubric)
+   breach_exposure · secret_leakage · attack_surface · vulnerabilities · hygiene
+                       ▼ severity-weighted, capped, summed → 100 − penalty
+                   Letter grade (A–F) + category breakdown + top risks
+```
+
+**CLI:** `ohsint vendor-risk -t vendor.com`
+**MCP:** `osint_vendor_risk(domains="vendor.com")`
+**Rubric:** tune category weights/caps/severity-multipliers/grade-bands in
+`configs/pipeline_defaults.yaml` under `vendor_risk`.
+**Authorization:** none — assessing a counterparty's public footprint is passive.
+
 ### Active Recon Pipeline (requires --authorization)
 
 **The only pipeline that touches the target.** Every stage sends traffic. Hard-refuses
@@ -212,6 +232,7 @@ When the user asks to "investigate", "validate", or "deep dive" on findings from
 | `secret_surface` | 7 | No | GitHub/Docker/Postman secret discovery |
 | `js_analysis` | 4 | No | JavaScript endpoint + secret analysis |
 | `osint_passive_full` | all | No | Full passive pipeline (all 4 combined) |
+| `vendor_risk` | reuse | No | Passive recon scored as a graded vendor risk scorecard |
 | `active_recon` | 6 | **Yes** | Active funnel — naabu → httpx → katana → nuclei (touches target) |
 
 ## API Keys

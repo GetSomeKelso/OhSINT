@@ -281,6 +281,15 @@ osint_passive_full:
     Chains all 4 passive pipelines with cross-pipeline data flow.
     Estimated runtime: 30-90 minutes. Invoke via 'ohsint passive-full' or osint_passive_full.
 
+vendor_risk:
+  description: "Vendor/third-party risk — passive recon scored as a graded risk scorecard"
+  tools: []
+  notes: >
+    Reuses the osint_passive_full toolchain (no new tools); re-frames findings as a
+    risk-to-you scorecard with a letter grade. Passive — no authorization gate.
+    Tune the rubric in configs/pipeline_defaults.yaml under `vendor_risk`.
+    Invoke via 'ohsint vendor-risk -t vendor.com' or osint_vendor_risk MCP tool.
+
 active_recon:
   description: "ACTIVE recon funnel — subfinder/crtsh → naabu → httpx → katana → nuclei (requires --authorization)"
   tools:
