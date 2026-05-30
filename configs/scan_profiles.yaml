@@ -281,6 +281,20 @@ osint_passive_full:
     Chains all 4 passive pipelines with cross-pipeline data flow.
     Estimated runtime: 30-90 minutes. Invoke via 'ohsint passive-full' or osint_passive_full.
 
+socmint:
+  description: "Individual SOCMINT profiling — username/email/name → sherlock + maigret + holehe (passive, consent-gated)"
+  tools:
+    - sherlock:
+        batch: true
+    - maigret
+    - holehe
+  notes: >
+    Profiles a SINGLE individual from a seed identifier (distinct from people_recon
+    which is company-scoped). Passive — public-profile enumeration only, never scrapes
+    facial images. Requires --consent attestation (you are authorized to profile the
+    subject). Uses dedicated SocmintPipeline. Invoke via 'ohsint socmint --consent -s <seed>'
+    or osint_socmint MCP tool.
+
 vendor_risk:
   description: "Vendor/third-party risk — passive recon scored as a graded risk scorecard"
   tools: []

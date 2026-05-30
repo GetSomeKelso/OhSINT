@@ -327,6 +327,7 @@ def install_check(ctx):
     from src.pipelines.passive_full import PassiveFullPipeline
     from src.pipelines.active_recon import ActiveReconPipeline
     from src.pipelines.vendor_risk import VendorRiskPipeline
+    from src.pipelines.socmint import SocmintPipeline
 
     pipelines = [
         ("takeover", TakeoverPipeline),
@@ -335,6 +336,7 @@ def install_check(ctx):
         ("js-analysis", JsAnalysisPipeline),
         ("passive-full", PassiveFullPipeline),
         ("vendor-risk", VendorRiskPipeline),
+        ("socmint [needs --consent]", SocmintPipeline),
         ("active-recon [ACTIVE — needs --authorization]", ActiveReconPipeline),
     ]
     from src.registry import _TOOL_REGISTRY
@@ -841,6 +843,64 @@ def passive_full(ctx, target, targets_file, scope_file, skip_takeover):
     console.print(f"[bold green]Starting full passive OSINT scan[/bold green]")
     console.print(f"  Targets: {', '.join(domains)}")
     report = pipeline.run(targets=domains, output_dir=output_dir, skip_takeover=skip_takeover)
+    save_report(report, output_dir, ctx.obj["output_format"])
+    console.print(f"\n[green]Reports saved to {output_dir}[/green]")
+    _print_summary(report)
+
+
+@cli.command("socmint")
+@click.option("--seed", "-s", required=True,
+              help="Subject seed: username, email, or full name.")
+@click.option("--consent", is_flag=True, default=False,
+              help="Attest you are authorized to profile this individual (engagement scope / own accounts).")
+@click.option("--max-usernames", type=int, default=5, help="Cap derived username candidates.")
+@click.option("--no-breach", is_flag=True, default=False, help="Skip h8mail breach check for email seeds.")
+@click.pass_context
+def socmint(ctx, seed, consent, max_usernames, no_breach):
+    """Profile an individual from a username, email, or name seed (SOCMINT).
+
+    Passive (public-data enumeration via sherlock/maigret/holehe) — but profiling
+    a person requires --consent: an attestation that you're authorized to profile
+    this subject (engagement scope or your own accounts). Never scrapes facial images.
+    """
+    from src.pipelines.socmint import SocmintPipeline, ConsentError, classify_seed
+
+    config: Config = ctx.obj["config"]
+    pipeline = SocmintPipeline(config=config, timeout=ctx.obj["timeout"], verbose=ctx.obj["verbose"])
+
+    if ctx.obj.get("dry_run"):
+        console.print(f"[yellow][DRY RUN][/yellow] SOCMINT Profile")
+        console.print(f"  Seed: {seed} ([cyan]{classify_seed(seed)}[/cyan])\n")
+        table = Table(title="Pipeline stages")
+        table.add_column("Tool", style="cyan")
+        table.add_column("Installed")
+        table.add_column("Command preview")
+        for info in pipeline.dry_run([seed]):
+            installed = "[green]Yes[/green]" if info["installed"] else "[red]No[/red]"
+            name = info["name"] + (" [dim](optional)[/dim]" if info.get("optional") else "")
+            table.add_row(name, installed, info["command"])
+        console.print(table)
+        return
+
+    if not consent:
+        console.print(
+            "[red]SOCMINT profiles an individual.[/red] Re-run with [bold]--consent[/bold] "
+            "to attest you are authorized to profile this subject (engagement scope or "
+            "your own accounts)."
+        )
+        sys.exit(1)
+
+    output_dir = _resolve_output_dir(ctx, "socmint_" + seed.replace("@", "_at_").replace(" ", "_"))
+    try:
+        report = pipeline.run(
+            seed=seed,
+            consent_confirmed=True,
+            max_usernames=max_usernames,
+            breach_check=not no_breach,
+        )
+    except ConsentError as e:
+        console.print(f"[red]{e}[/red]")
+        sys.exit(1)
     save_report(report, output_dir, ctx.obj["output_format"])
     console.print(f"\n[green]Reports saved to {output_dir}[/green]")
     _print_summary(report)

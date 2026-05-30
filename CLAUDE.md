@@ -111,6 +111,27 @@ domain(s) ──► subfinder + crt.sh (parallel subdomain enumeration)
 **MCP:** `osint_subdomain_takeover(domains="domain.com,other.com")`
 **Re-scan:** `ohsint takeover -t domain.com --re-scan results/previous/report.json`
 
+### SOCMINT — Individual Subject Profiling (passive — consent-gated)
+
+Profiles a **single individual** from a username / email / name seed (distinct from
+the company-scoped people recon). Passive public-profile enumeration — never scrapes
+facial images. Requires a `--consent` attestation that you are authorized to profile
+the subject (engagement scope or your own accounts).
+
+```
+seed (username / email / name)
+   ├─ email    → holehe (platform registration) + h8mail (breach) + derive username
+   ├─ username → sherlock + maigret (cross-platform enumeration)
+   └─ name     → derive username candidates → sherlock + maigret
+                      ▼ correlate + dedupe + surface recovery identifiers
+                  Subject profile (social profiles, platforms, breach exposure)
+```
+
+**CLI:** `ohsint socmint --consent -s "john.doe@example.com"`
+**MCP:** `osint_socmint(seed="johndoe", consent_confirmed=true)`
+**Consent gate:** passive (no `--authorization`), but profiling a person requires the
+`--consent` / `consent_confirmed` attestation. Refuses to run without it.
+
 ### Vendor Risk Assessment (passive — no new tools)
 
 Runs the passive recon toolchain against a **vendor/counterparty** domain, then
@@ -232,6 +253,7 @@ When the user asks to "investigate", "validate", or "deep dive" on findings from
 | `secret_surface` | 7 | No | GitHub/Docker/Postman secret discovery |
 | `js_analysis` | 4 | No | JavaScript endpoint + secret analysis |
 | `osint_passive_full` | all | No | Full passive pipeline (all 4 combined) |
+| `socmint` | 3 | Consent | Individual profiling — username/email/name → sherlock/maigret/holehe |
 | `vendor_risk` | reuse | No | Passive recon scored as a graded vendor risk scorecard |
 | `active_recon` | 6 | **Yes** | Active funnel — naabu → httpx → katana → nuclei (touches target) |
 

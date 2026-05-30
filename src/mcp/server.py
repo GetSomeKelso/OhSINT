@@ -1210,6 +1210,55 @@ async def osint_passive_full(
 
 
 # ---------------------------------------------------------------------------
+# SOCMINT — individual subject profiling (consent-gated)
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_socmint(
+    seed: str,
+    consent_confirmed: bool = False,
+    max_usernames: int = 5,
+    breach_check: bool = True,
+) -> str:
+    """Profile an individual from a username / email / name seed (SOCMINT).
+
+    Passive public-profile enumeration via sherlock + maigret + holehe (+ h8mail
+    breach for email seeds). Distinct from osint_people_recon (company-scoped).
+
+    Profiling an individual requires consent_confirmed=True — an attestation that
+    you are authorized to profile this subject (engagement scope or your own
+    accounts). Never scrapes facial images.
+
+    Args:
+        seed: username, email, or full name
+        consent_confirmed: REQUIRED — attestation of authorization to profile subject
+        max_usernames: cap on derived username candidates
+        breach_check: run h8mail breach check for email seeds
+    """
+    start = _time.time()
+    if not seed.strip():
+        raise ValueError("No seed provided.")
+    try:
+        from src.pipelines.socmint import SocmintPipeline, ConsentError
+
+        pipeline = SocmintPipeline(config=_get_config(), timeout=DEFAULT_TIMEOUT, verbose=True)
+        try:
+            report = await asyncio.to_thread(
+                pipeline.run, seed, consent_confirmed, max_usernames, breach_check,
+            )
+        except ConsentError as ce:
+            raise ValueError(str(ce))
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe = seed.replace("@", "_at_").replace(" ", "_").replace("/", "_")
+        output_dir = DEFAULT_RESULTS_DIR / f"socmint_{safe}_{timestamp}"
+        save_report(report, output_dir, "all")
+        _audit_log("socmint", seed, consent_confirmed, True, _time.time() - start)
+        return report.to_markdown()
+    except Exception as exc:
+        _audit_log("socmint", seed, consent_confirmed, False, _time.time() - start, str(exc))
+        raise
+
+
+# ---------------------------------------------------------------------------
 # Vendor / third-party risk assessment
 # ---------------------------------------------------------------------------
 @mcp.tool()
