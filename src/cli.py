@@ -317,6 +317,44 @@ def install_check(ctx):
                 f"       → install: {item['install']}"
             )
 
+    # Check pipeline readiness — a pipeline passes when all of its REQUIRED tools
+    # are installed. Optional tools (graceful degrade) are noted but don't block.
+    console.print("\n[bold]Checking pipelines...[/bold]\n")
+    from src.pipelines.takeover import TakeoverPipeline
+    from src.pipelines.url_harvest import UrlHarvestPipeline
+    from src.pipelines.secret_surface import SecretSurfacePipeline
+    from src.pipelines.js_analysis import JsAnalysisPipeline
+    from src.pipelines.passive_full import PassiveFullPipeline
+
+    pipelines = [
+        ("takeover", TakeoverPipeline),
+        ("url-harvest", UrlHarvestPipeline),
+        ("secret-surface", SecretSurfacePipeline),
+        ("js-analysis", JsAnalysisPipeline),
+        ("passive-full", PassiveFullPipeline),
+    ]
+    for label, cls in pipelines:
+        try:
+            tools = cls(config=config).dry_run(["example.com"])
+        except Exception as e:
+            console.print(f"  [red]✗[/red] {label} — readiness check error: {e}")
+            all_ok = False
+            continue
+        required = [t for t in tools if not t.get("optional")]
+        missing = [t["name"] for t in required if not t["installed"]]
+        opt_missing = [t["name"] for t in tools if t.get("optional") and not t["installed"]]
+        ready = len(required) - len(missing)
+        if not missing:
+            line = f"  [green]✓[/green] {label} — ready ({ready}/{len(required)} required tools)"
+            if opt_missing:
+                line += f"  [dim](optional off: {', '.join(opt_missing)})[/dim]"
+            console.print(line)
+        else:
+            console.print(
+                f"  [red]✗[/red] {label} — missing {len(missing)}: {', '.join(missing)}"
+            )
+            all_ok = False
+
     if all_ok:
         console.print("\n[bold green]All checks passed.[/bold green]")
     else:

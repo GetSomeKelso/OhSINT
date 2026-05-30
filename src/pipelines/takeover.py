@@ -202,6 +202,7 @@ class TakeoverPipeline:
         tools_info.append({
             "name": "dnsx (n0kovo brute-force, --dns-bruteforce)",
             "installed": bool(wl) and os.path.isfile(wl),
+            "optional": True,  # only runs with --dns-bruteforce
             "command": f"dnsx -d {dom} -w {wl or '<wordlist>'} -t {conc} -silent",
         })
         return tools_info

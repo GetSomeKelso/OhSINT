@@ -169,6 +169,12 @@ class JsAnalysisPipeline:
             "installed": os.path.isfile(api_file),
             "command": f"probe https://<host>/<path> for paths in {api_file}",
         })
+        # getjs (redundant with subjs), js-beautify, and the SecLists path source
+        # all degrade gracefully — they don't block pipeline readiness.
+        optional = {"getjs", "js-beautify", "SecLists api-endpoints (Stage 7 paths)"}
+        for i in tools_info:
+            if i["name"] in optional:
+                i["optional"] = True
         return tools_info
 
     # ── Stage implementations ─────────────────────────────────────────
