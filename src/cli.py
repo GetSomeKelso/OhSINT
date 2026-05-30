@@ -1026,6 +1026,67 @@ def opsec_check(ctx):
         console.print("\n[yellow]No configs/opsec.yaml found — using defaults[/yellow]")
 
 
+# Default wiki vault — the operator's verified Obsidian vault. Override with --vault
+# or env OHSINT_WIKI_VAULT.
+DEFAULT_WIKI_VAULT = os.environ.get(
+    "OHSINT_WIKI_VAULT",
+    r"C:\Users\kelso\Documents\AI Tool Test",
+)
+
+
+@cli.command("wiki-ingest")
+@click.argument("report_path", type=click.Path(exists=True))
+@click.option("--vault", default=None, help=f"Obsidian vault root (default: {DEFAULT_WIKI_VAULT}).")
+@click.pass_context
+def wiki_ingest(ctx, report_path, vault):
+    """Ingest a report.json into the OhSINT wiki (code pass of the hybrid model).
+
+    Scaffolds interlinked pages (target, engagement, finding-type, entity) under
+    <vault>/OhSINT/wiki/. Findings render between <!-- ohsint:auto --> markers so an
+    LLM synthesis pass (and your edits) outside those markers survive re-ingest.
+    """
+    from src.wiki import WikiBuilder
+
+    vault_root = Path(vault or DEFAULT_WIKI_VAULT) / "OhSINT"
+    builder = WikiBuilder(vault_root=vault_root)
+    console.print(f"[bold green]Ingesting[/bold green] {report_path}")
+    console.print(f"  Vault: {vault_root}")
+    result = builder.ingest_path(Path(report_path))
+
+    console.print(f"\n[green]✓[/green] Engagement: {result['engagement']}")
+    console.print(f"  Findings ingested: {result['findings']}")
+    console.print(f"  Pages written: {len(result['pages_written'])}")
+    d = result["delta"]
+    if d["new"]:
+        console.print(f"  [cyan]🆕 New:[/cyan] {len(d['new'])}")
+    if d["resolved"]:
+        console.print(f"  [yellow]✓ Resolved/gone:[/yellow] {len(d['resolved'])}")
+    console.print(f"\n[dim]Next: ask the LLM to synthesise/cross-link per OhSINT MCP.md[/dim]")
+
+
+@cli.command("wiki-lint")
+@click.option("--vault", default=None, help=f"Obsidian vault root (default: {DEFAULT_WIKI_VAULT}).")
+@click.option("--freshness-days", type=int, default=90, help="Flag findings older than this.")
+@click.pass_context
+def wiki_lint(ctx, vault, freshness_days):
+    """Lint the OhSINT wiki — orphan pages, dangling links, stale findings, missing provenance."""
+    from src.wiki import lint_wiki
+
+    vault_root = Path(vault or DEFAULT_WIKI_VAULT) / "OhSINT"
+    console.print(f"[bold]Linting wiki[/bold] at {vault_root}\n")
+    issues = lint_wiki(vault_root, freshness_days=freshness_days)
+    if not any(issues.values()):
+        console.print("[green]✓ Wiki is structurally sound — no issues.[/green]")
+        return
+    for category, items in issues.items():
+        if items:
+            console.print(f"[yellow]{category}[/yellow] ({len(items)}):")
+            for it in items[:20]:
+                console.print(f"  - {it}")
+            if len(items) > 20:
+                console.print(f"  … +{len(items) - 20} more")
+
+
 def _resolve_output_dir(ctx: click.Context, target: str) -> Path:
     if ctx.obj["output"]:
         return Path(ctx.obj["output"])
