@@ -280,3 +280,24 @@ osint_passive_full:
   notes: >
     Chains all 4 passive pipelines with cross-pipeline data flow.
     Estimated runtime: 30-90 minutes. Invoke via 'ohsint passive-full' or osint_passive_full.
+
+active_recon:
+  description: "ACTIVE recon funnel — subfinder/crtsh → naabu → httpx → katana → nuclei (requires --authorization)"
+  tools:
+    - subfinder:
+        all_sources: true
+    - crtsh:
+        wildcard: true
+    - naabu:
+        top_ports: "100"
+    - httpx:
+        follow_redirects: true
+    - katana:
+        depth: 2
+    - nuclei_scan:
+        severity: "high,critical"
+  notes: >
+    ACTIVE — every stage sends traffic to the target. Requires written authorization.
+    Narrowing funnel: each stage only processes what the prior stage confirmed live.
+    shuffledns brute-force is opt-in (--brute). Uses dedicated ActiveReconPipeline.
+    Invoke via 'ohsint active-recon --authorization' or osint_active_recon MCP tool.

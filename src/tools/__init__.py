@@ -21,6 +21,7 @@ from src.tools.whois_tool import WhoisTool
 from src.tools.dnsx_cname import DnsxCname
 from src.tools.subzy import SubzyTool
 from src.tools.nuclei_takeovers import NucleiTakeovers
+from src.tools.nuclei_scan import NucleiScan
 
 # Threat intel & breach data
 from src.tools.virustotal import VirusTotalTool
@@ -124,6 +125,7 @@ __all__ = [
     "DnsxCname",
     "SubzyTool",
     "NucleiTakeovers",
+    "NucleiScan",
     # Threat intel & breach data
     "VirusTotalTool",
     "H8mail",

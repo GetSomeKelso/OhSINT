@@ -1210,6 +1210,53 @@ async def osint_passive_full(
 
 
 # ---------------------------------------------------------------------------
+# Active reconnaissance (auth-gated funnel)
+# ---------------------------------------------------------------------------
+@mcp.tool()
+async def osint_active_recon(
+    domains: str,
+    authorization_confirmed: bool = False,
+    top_ports: str = "100",
+    nuclei_severity: str = "high,critical",
+    brute: bool = False,
+    crawl_depth: int = 2,
+) -> str:
+    """ACTIVE recon funnel: subfinder/crtsh → naabu → httpx → katana → nuclei.
+
+    Touches the target directly at every stage. REQUIRES authorization_confirmed=True
+    (written authorization from the target owner). Each stage narrows to confirmed-live
+    before the next, more expensive/noisier stage runs. Recon only — does not exploit.
+
+    Args:
+        domains: comma-separated domain list
+        top_ports: naabu top-ports preset (100/1000/full)
+        nuclei_severity: nuclei severity filter (e.g. "high,critical")
+        brute: add active DNS brute-force (shuffledns); slow + loud, off by default
+        crawl_depth: katana crawl depth
+    """
+    _require_auth(authorization_confirmed)  # active pipeline — auth mandatory
+    start = _time.time()
+    domain_list = [d.strip().lower() for d in domains.split(",") if d.strip()]
+    if not domain_list:
+        raise ValueError("No domains provided. Pass comma-separated domain list.")
+    try:
+        from src.pipelines.active_recon import ActiveReconPipeline
+
+        pipeline = ActiveReconPipeline(config=_get_config(), timeout=DEFAULT_TIMEOUT, verbose=True)
+        report = await asyncio.to_thread(
+            pipeline.run, domain_list, True, top_ports, nuclei_severity, brute, crawl_depth,
+        )
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = DEFAULT_RESULTS_DIR / f"active_recon_{timestamp}"
+        save_report(report, output_dir, "all")
+        _audit_log("active_recon", domains, authorization_confirmed, True, _time.time() - start)
+        return report.to_markdown()
+    except Exception as exc:
+        _audit_log("active_recon", domains, authorization_confirmed, False, _time.time() - start, str(exc))
+        raise
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 def _format_result(result: Any) -> str:

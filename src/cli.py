@@ -325,6 +325,7 @@ def install_check(ctx):
     from src.pipelines.secret_surface import SecretSurfacePipeline
     from src.pipelines.js_analysis import JsAnalysisPipeline
     from src.pipelines.passive_full import PassiveFullPipeline
+    from src.pipelines.active_recon import ActiveReconPipeline
 
     pipelines = [
         ("takeover", TakeoverPipeline),
@@ -332,6 +333,7 @@ def install_check(ctx):
         ("secret-surface", SecretSurfacePipeline),
         ("js-analysis", JsAnalysisPipeline),
         ("passive-full", PassiveFullPipeline),
+        ("active-recon [ACTIVE — needs --authorization]", ActiveReconPipeline),
     ]
     from src.registry import _TOOL_REGISTRY
 
@@ -648,6 +650,75 @@ def url_harvest(ctx, target, targets_file, scope_file, max_urls):
     console.print(f"[bold green]Starting URL harvest[/bold green]")
     console.print(f"  Targets: {', '.join(domains)}")
     report = pipeline.run(targets=domains, max_urls=max_urls, output_dir=output_dir)
+    save_report(report, output_dir, ctx.obj["output_format"])
+    console.print(f"\n[green]Reports saved to {output_dir}[/green]")
+    _print_summary(report)
+
+
+@cli.command("active-recon")
+@click.option("--target", "-t", multiple=True, help="Target domain(s).")
+@click.option("--targets-file", type=click.Path(exists=True), default=None)
+@click.option("--scope-file", type=click.Path(exists=True), default=None)
+@click.option("--top-ports", default="100", help="naabu top-ports preset (100/1000/full).")
+@click.option("--nuclei-severity", default="high,critical", help="nuclei severity filter.")
+@click.option("--brute", is_flag=True, default=False,
+              help="Add active DNS brute-force (shuffledns). Slow + loud; off by default.")
+@click.option("--crawl-depth", type=int, default=2, help="katana crawl depth.")
+@click.pass_context
+def active_recon(ctx, target, targets_file, scope_file, top_ports, nuclei_severity, brute, crawl_depth):
+    """ACTIVE recon funnel: subfinder/crtsh → naabu → httpx → katana → nuclei.
+
+    Touches the target directly. Requires --authorization (written authorization
+    from the target owner). Each stage narrows to confirmed-live before the next.
+    """
+    from src.pipelines.active_recon import ActiveReconPipeline, AuthorizationError
+
+    domains = _resolve_takeover_targets(ctx, target, targets_file, scope_file)
+    if not domains:
+        console.print("[red]No targets specified.[/red]")
+        sys.exit(1)
+
+    config: Config = ctx.obj["config"]
+    pipeline = ActiveReconPipeline(config=config, timeout=ctx.obj["timeout"], verbose=ctx.obj["verbose"])
+
+    if ctx.obj.get("dry_run"):
+        console.print(f"[yellow][DRY RUN][/yellow] Active Recon Pipeline (funnel)")
+        console.print(f"  Targets: {', '.join(domains)}\n")
+        table = Table(title="Pipeline stages (narrowing funnel)")
+        table.add_column("Stage", style="cyan")
+        table.add_column("Installed")
+        table.add_column("Command preview")
+        for info in pipeline.dry_run(domains):
+            installed = "[green]Yes[/green]" if info["installed"] else "[red]No[/red]"
+            name = info["name"] + (" [dim](optional)[/dim]" if info.get("optional") else "")
+            table.add_row(name, installed, info["command"])
+        console.print(table)
+        return
+
+    # Hard authorization gate — this pipeline touches the target.
+    if not ctx.obj.get("authorization"):
+        console.print(
+            "[red]Active recon requires authorization.[/red] Re-run with "
+            "[bold]--authorization[/bold] to confirm you have WRITTEN authorization "
+            "from the target owner. Every stage sends traffic to the target."
+        )
+        sys.exit(1)
+
+    output_dir = _resolve_output_dir(ctx, "active_recon_" + "_".join(domains[:3]))
+    console.print(f"[bold red]Starting ACTIVE reconnaissance[/bold red]")
+    console.print(f"  Targets: {', '.join(domains)}")
+    try:
+        report = pipeline.run(
+            targets=domains,
+            authorization_confirmed=True,
+            top_ports=top_ports,
+            nuclei_severity=nuclei_severity,
+            brute=brute,
+            crawl_depth=crawl_depth,
+        )
+    except AuthorizationError as e:
+        console.print(f"[red]{e}[/red]")
+        sys.exit(1)
     save_report(report, output_dir, ctx.obj["output_format"])
     console.print(f"\n[green]Reports saved to {output_dir}[/green]")
     _print_summary(report)
