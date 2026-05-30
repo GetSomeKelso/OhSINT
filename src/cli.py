@@ -1026,12 +1026,15 @@ def opsec_check(ctx):
         console.print("\n[yellow]No configs/opsec.yaml found — using defaults[/yellow]")
 
 
-# Default wiki vault — the operator's verified Obsidian vault. Override with --vault
-# or env OHSINT_WIKI_VAULT.
+# Default wiki vault + OhSINT root within it. The operator set
+# "...\AI Tool Test\OhSINT MCP\" as the OhSINT root (schema note + raw/ + wiki/).
+# Override the vault with --vault or env OHSINT_WIKI_VAULT; the OhSINT root folder
+# name is OHSINT_WIKI_ROOT (default "OhSINT MCP").
 DEFAULT_WIKI_VAULT = os.environ.get(
     "OHSINT_WIKI_VAULT",
     r"C:\Users\kelso\Documents\AI Tool Test",
 )
+DEFAULT_WIKI_ROOT = os.environ.get("OHSINT_WIKI_ROOT", "OhSINT MCP")
 
 
 @cli.command("wiki-ingest")
@@ -1047,7 +1050,7 @@ def wiki_ingest(ctx, report_path, vault):
     """
     from src.wiki import WikiBuilder
 
-    vault_root = Path(vault or DEFAULT_WIKI_VAULT) / "OhSINT"
+    vault_root = Path(vault or DEFAULT_WIKI_VAULT) / DEFAULT_WIKI_ROOT
     builder = WikiBuilder(vault_root=vault_root)
     console.print(f"[bold green]Ingesting[/bold green] {report_path}")
     console.print(f"  Vault: {vault_root}")
@@ -1072,7 +1075,7 @@ def wiki_lint(ctx, vault, freshness_days):
     """Lint the OhSINT wiki — orphan pages, dangling links, stale findings, missing provenance."""
     from src.wiki import lint_wiki
 
-    vault_root = Path(vault or DEFAULT_WIKI_VAULT) / "OhSINT"
+    vault_root = Path(vault or DEFAULT_WIKI_VAULT) / DEFAULT_WIKI_ROOT
     console.print(f"[bold]Linting wiki[/bold] at {vault_root}\n")
     issues = lint_wiki(vault_root, freshness_days=freshness_days)
     if not any(issues.values()):
