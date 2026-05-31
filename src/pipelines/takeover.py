@@ -96,6 +96,12 @@ class TakeoverPipeline:
                 console.print("[yellow]No subdomains found — nothing to check.[/yellow]")
                 return self._empty_report(targets, start_time, tools_executed, tools_failed)
 
+            # Persist enumerated subdomains as SUBDOMAIN findings (informational) so
+            # they accumulate in the wiki for cross-engagement correlation — distinct
+            # from SUBDOMAIN_TAKEOVER findings (the actual risk). Even a "clean" target
+            # records its attack surface. (Decision 2 — see tasks/lessons.md.)
+            subdomain_findings = self._subdomain_findings(subdomains, parent_map)
+
             # Write subdomains to temp file
             sub_file = self._write_temp_file(sorted(subdomains), "subs")
             temp_files.append(sub_file)
@@ -118,7 +124,7 @@ class TakeoverPipeline:
                 console.print("[green]No dangling CNAME candidates found — target appears safe.[/green]")
                 return self._build_report(
                     targets, start_time, tools_executed, tools_failed,
-                    findings=[], cname_map=cname_map,
+                    findings=list(subdomain_findings), cname_map=cname_map,
                 )
 
             # Write candidates to temp file
@@ -147,6 +153,8 @@ class TakeoverPipeline:
             # Stage 5: Cross-validate
             console.print("[cyan]Stage 5:[/cyan] Cross-validating findings...")
             findings = self._cross_validate(candidates, subzy_result, nuclei_result, parent_map)
+            # Carry the enumerated-subdomain findings alongside the takeover findings
+            findings = list(subdomain_findings) + findings
 
             confirmed = sum(1 for f in findings if "confirmed" in f.tags)
             unconfirmed = sum(1 for f in findings if "unconfirmed" in f.tags)
@@ -257,6 +265,27 @@ class TakeoverPipeline:
 
     def _run_enum_tool(self, tool, domain: str) -> ToolResult:
         return tool.run(domain, timeout=self.timeout)
+
+    def _subdomain_findings(
+        self, subdomains: set[str], parent_map: dict[str, str]
+    ) -> list[IntelFinding]:
+        """Turn enumerated subdomains into informational SUBDOMAIN findings.
+
+        Low-confidence, informational — these are attack-surface inventory for the
+        wiki's cross-engagement correlation, NOT takeover risk. Kept type-distinct
+        from SUBDOMAIN_TAKEOVER so the takeover verdict/summary is unaffected.
+        """
+        findings: list[IntelFinding] = []
+        for sub in sorted(subdomains):
+            findings.append(IntelFinding(
+                type=IntelType.SUBDOMAIN,
+                value=sub,
+                source_tool="subfinder,crtsh",
+                confidence=0.8,
+                tags=["subdomain", "enumerated"],
+                raw_data={"parent_domain": parent_map.get(sub, "")},
+            ))
+        return findings
 
     def _dns_bruteforce(
         self, targets: list[str], existing: set[str], parent_map: dict[str, str]

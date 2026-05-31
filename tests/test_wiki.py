@@ -105,6 +105,20 @@ def test_reingest_is_idempotent_and_preserves_edits(tmp_path):
     assert after.count("a.acme.com") >= 1
 
 
+def test_takeover_persists_subdomains_distinct_from_takeovers():
+    """Decision 2: enumerated subdomains become SUBDOMAIN findings, kept distinct
+    from SUBDOMAIN_TAKEOVER so the takeover verdict is unaffected."""
+    from src.pipelines.takeover import TakeoverPipeline
+    p = TakeoverPipeline()
+    fds = p._subdomain_findings({"a.ex.com", "b.ex.com"}, {"a.ex.com": "ex.com"})
+    assert len(fds) == 2
+    assert all(f.type == IntelType.SUBDOMAIN for f in fds)
+    assert not any(f.type == IntelType.SUBDOMAIN_TAKEOVER for f in fds)
+    assert fds[0].raw_data.get("parent_domain") == "ex.com"
+    # informational confidence, not risk-level
+    assert all(f.confidence < 0.9 for f in fds)
+
+
 def test_lint_flags_dangling_link(tmp_path):
     vault = tmp_path / "OhSINT"
     wiki = vault / "wiki"

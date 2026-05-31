@@ -90,3 +90,17 @@ automatic dedup) before the CNAME stage. Off by default; `ohsint takeover --dns-
 the whole stage silently returned `[]` (NameError swallowed by a broad except). Fixed
 while wiring in the SecLists `api-endpoints.txt` / `swagger.txt` path source (with the
 hardcoded `swagger_common_paths` retained as fallback when SecLists isn't installed).
+
+## Wiki / episodic memory
+
+### 14. Passive pipelines must persist subdomains as findings (Decision 2)
+A live loop test exposed the gap: takeover found 11 real subdomains via crt.sh but
+the wiki recorded ZERO — subdomains were intermediate data, only SUBDOMAIN_TAKEOVER
+findings reached the report. A "clean" target wrote an empty wiki despite real intel.
+Fix: `TakeoverPipeline._subdomain_findings()` emits informational SUBDOMAIN findings
+(confidence 0.8, tags [subdomain, enumerated]) for every enumerated subdomain, kept
+TYPE-DISTINCT from SUBDOMAIN_TAKEOVER so the takeover verdict/summary is unaffected.
+This is what makes cross-engagement correlation (shared IPs/certs/subdomains) possible.
+Deliberately scoped: persist subdomains (bounded, high-value, cross-linkable); do NOT
+persist the high-volume URL firehose from url-harvest (would blow past the ~100-item
+personal-wiki scale the Karpathy video warns about).
